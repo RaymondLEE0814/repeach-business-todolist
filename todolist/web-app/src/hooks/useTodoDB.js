@@ -106,16 +106,14 @@ export const useTodoDB = (projectId) => {
     const projectName = PROJECTS.find(p => p.id === pid)?.name || pid;
     await supabase.from('projects').upsert({ id: pid, name: projectName });
 
-    // 카테고리 업서트 후, 현재 목록에 없는 카테고리 삭제
+    // 카테고리 업서트
     const catRows = cats.map((c, i) => ({ project_id: pid, id: String(c.id), name: c.name, position: i }));
     if (catRows.length) {
       const { error } = await supabase.from('categories').upsert(catRows);
       if (error) throw error;
     }
-    await supabase.from('categories').delete().eq('project_id', pid)
-      .not('id', 'in', `(${cats.map(c => `"${String(c.id)}"`).join(',') || '""'})`);
 
-    // 할 일 업서트 후, 현재 목록에 없는 할 일 삭제
+    // 할 일 업서트
     const todoRows = tds.map((t, i) => ({
       project_id: pid,
       id: String(t.id),
@@ -131,8 +129,21 @@ export const useTodoDB = (projectId) => {
       const { error } = await supabase.from('todos').upsert(todoRows);
       if (error) throw error;
     }
-    await supabase.from('todos').delete().eq('project_id', pid)
-      .not('id', 'in', `(${tds.map(t => `"${String(t.id)}"`).join(',') || '""'})`);
+
+    // 현재 화면에 없는(=삭제된) 행을 DB에서도 제거
+    await deleteRemovedRows('categories', pid, new Set(catRows.map(r => r.id)));
+    await deleteRemovedRows('todos', pid, new Set(todoRows.map(r => r.id)));
+  };
+
+  // DB의 기존 id 중, 현재 유지할 id 집합에 없는 것만 삭제 (특수문자 ID에도 안전)
+  const deleteRemovedRows = async (table, pid, keepIds) => {
+    const { data: existing, error } = await supabase.from(table).select('id').eq('project_id', pid);
+    if (error) throw error;
+    const toDelete = (existing || []).map(r => r.id).filter(id => !keepIds.has(id));
+    if (toDelete.length) {
+      const { error: delErr } = await supabase.from(table).delete().eq('project_id', pid).in('id', toDelete);
+      if (delErr) throw delErr;
+    }
   };
 
   // ---------- 저장 ----------
