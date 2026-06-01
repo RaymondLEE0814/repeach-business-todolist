@@ -1,5 +1,37 @@
 import React, { useState } from 'react';
-import { Trash2, Plus, ExternalLink, FolderPlus } from 'lucide-react';
+import { Trash2, Plus, ExternalLink, FolderPlus, Pencil } from 'lucide-react';
+
+const normalizeUrl = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
+
+// 링크 셀: URL이 있으면 열기 아이콘만, 클릭하면 인라인 편집으로 전환
+const LinkCell = ({ value, onChange }) => {
+  const [editing, setEditing] = useState(false);
+  if (editing || !value) {
+    return (
+      <input
+        type="text"
+        autoFocus={editing}
+        className="inline-input"
+        style={{ fontSize: '0.8rem', textAlign: 'center' }}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => setEditing(false)}
+        onKeyDown={(e) => { if (e.key === 'Enter') setEditing(false); }}
+        placeholder="URL"
+      />
+    );
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.15rem' }}>
+      <a href={normalizeUrl(value)} target="_blank" rel="noreferrer" className="btn-icon" style={{ opacity: 1, color: 'var(--color-sky-blue)' }} title={value}>
+        <ExternalLink size={16} />
+      </a>
+      <button className="btn-icon" style={{ padding: '0.3rem' }} title="링크 수정" onClick={() => setEditing(true)}>
+        <Pencil size={13} />
+      </button>
+    </div>
+  );
+};
 
 const TableView = ({ categories, todos, onUpdate, onDelete, onAdd, onAddCategory, onDeleteCategory }) => {
   const [filter, setFilter] = useState('ALL');
@@ -13,8 +45,6 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd, onAddCategory
       setFilter(id); // 새로 만든 카테고리로 필터 이동
     }
   };
-
-  const normalizeUrl = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -44,11 +74,11 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd, onAddCategory
               <tr>
                 <th style={{ width: '50px', textAlign: 'center' }}>상태</th>
                 <th style={{ width: '170px' }}>카테고리</th>
-                <th style={{ minWidth: '260px' }}>할 일 내용</th>
-                <th style={{ width: '90px' }}>링크</th>
+                <th style={{ minWidth: '240px' }}>할 일 내용</th>
+                <th style={{ width: '64px', textAlign: 'center' }}>링크</th>
                 <th style={{ width: '110px' }}>담당자</th>
                 <th style={{ width: '120px' }}>진행률</th>
-                <th style={{ width: '22%' }}>비고 / 메모</th>
+                <th style={{ width: '24%' }}>비고 / 메모</th>
                 <th style={{ width: '50px' }}></th>
               </tr>
             </thead>
@@ -89,22 +119,7 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd, onAddCategory
                     />
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <input
-                        type="text"
-                        className="inline-input"
-                        style={{ fontSize: '0.8rem' }}
-                        value={todo.link || ''}
-                        onChange={(e) => onUpdate(todo.id, { link: e.target.value })}
-                        placeholder="URL"
-                        title={todo.link || ''}
-                      />
-                      {todo.link ? (
-                        <a href={normalizeUrl(todo.link)} target="_blank" rel="noreferrer" className="btn-icon" style={{ opacity: 1, color: 'var(--border-focus)' }} title="링크 열기">
-                          <ExternalLink size={16} />
-                        </a>
-                      ) : null}
-                    </div>
+                    <LinkCell value={todo.link} onChange={(v) => onUpdate(todo.id, { link: v })} />
                   </td>
                   <td>
                     <input
