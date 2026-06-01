@@ -1,50 +1,63 @@
 import React, { useState } from 'react';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, ExternalLink, FolderPlus } from 'lucide-react';
 
-const TableView = ({ categories, todos, onUpdate, onDelete, onAdd }) => {
+const TableView = ({ categories, todos, onUpdate, onDelete, onAdd, onAddCategory, onDeleteCategory }) => {
   const [filter, setFilter] = useState('ALL');
 
-  const filteredTodos = filter === 'ALL' 
-    ? todos 
-    : todos.filter(t => t.categoryId === filter);
+  const filteredTodos = filter === 'ALL' ? todos : todos.filter(t => t.categoryId === filter);
+
+  const handleAddCategory = () => {
+    const name = window.prompt('새 카테고리 이름을 입력하세요');
+    if (name && name.trim() && onAddCategory) {
+      const id = onAddCategory(name.trim());
+      setFilter(id); // 새로 만든 카테고리로 필터 이동
+    }
+  };
+
+  const normalizeUrl = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end' }}>
-        <select 
-          className="inline-input" 
+      <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+        <button className="btn-primary" style={{ background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }} onClick={handleAddCategory}>
+          <FolderPlus size={18} /> 카테고리 추가
+        </button>
+        <select
+          className="inline-input"
           style={{ width: 'auto', border: '1px solid var(--border-color)' }}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         >
           <option value="ALL">전체 보기</option>
-          {categories.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
+          {categories.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
         </select>
       </div>
 
-      <div className="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th style={{ width: '50px', textAlign: 'center' }}>상태</th>
-              <th style={{ width: '180px' }}>카테고리</th>
-              <th style={{ minWidth: '300px' }}>할 일 내용</th>
-              <th style={{ width: '120px' }}>담당자</th>
-              <th style={{ width: '120px' }}>진행률</th>
-              <th style={{ width: '25%' }}>비고 / 메모</th>
-              <th style={{ width: '60px' }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTodos.map((todo) => {
-              const cat = categories.find(c => c.id === todo.categoryId);
-              return (
+      {categories.length === 0 ? (
+        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+          아직 카테고리가 없습니다. 위 <strong>“카테고리 추가”</strong> 버튼으로 시작하세요.
+        </div>
+      ) : (
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: '50px', textAlign: 'center' }}>상태</th>
+                <th style={{ width: '170px' }}>카테고리</th>
+                <th style={{ minWidth: '260px' }}>할 일 내용</th>
+                <th style={{ width: '90px' }}>링크</th>
+                <th style={{ width: '110px' }}>담당자</th>
+                <th style={{ width: '120px' }}>진행률</th>
+                <th style={{ width: '22%' }}>비고 / 메모</th>
+                <th style={{ width: '50px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTodos.map((todo) => (
                 <tr key={todo.id}>
                   <td style={{ textAlign: 'center' }}>
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="custom-checkbox"
                       checked={todo.completed}
                       onChange={(e) => {
@@ -62,14 +75,12 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd }) => {
                       value={todo.categoryId}
                       onChange={(e) => onUpdate(todo.id, { categoryId: e.target.value })}
                     >
-                      {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
+                      {categories.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
                     </select>
                   </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className={`inline-input ${todo.completed ? 'completed-text' : ''}`}
                       style={{ fontWeight: 500 }}
                       value={todo.title || ''}
@@ -77,9 +88,27 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd }) => {
                       placeholder="할 일을 입력하세요"
                     />
                   </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <input
+                        type="text"
+                        className="inline-input"
+                        style={{ fontSize: '0.8rem' }}
+                        value={todo.link || ''}
+                        onChange={(e) => onUpdate(todo.id, { link: e.target.value })}
+                        placeholder="URL"
+                        title={todo.link || ''}
+                      />
+                      {todo.link ? (
+                        <a href={normalizeUrl(todo.link)} target="_blank" rel="noreferrer" className="btn-icon" style={{ opacity: 1, color: 'var(--border-focus)' }} title="링크 열기">
+                          <ExternalLink size={16} />
+                        </a>
+                      ) : null}
+                    </div>
+                  </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className={`inline-input ${todo.completed ? 'completed-text' : ''}`}
                       style={{ textAlign: 'center' }}
                       value={todo.assignee || ''}
@@ -93,10 +122,7 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd }) => {
                       value={todo.progress || '0'}
                       onChange={(e) => {
                         const val = e.target.value;
-                        onUpdate(todo.id, { 
-                          progress: val, 
-                          completed: val === '100' 
-                        });
+                        onUpdate(todo.id, { progress: val, completed: val === '100' });
                       }}
                     >
                       <option value="0">0%</option>
@@ -107,8 +133,8 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd }) => {
                     </select>
                   </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className={`inline-input ${todo.completed ? 'completed-text' : ''}`}
                       value={todo.notes || ''}
                       onChange={(e) => onUpdate(todo.id, { notes: e.target.value })}
@@ -121,17 +147,33 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd }) => {
                     </button>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      <div className="table-actions">
-        <button className="btn-primary" onClick={() => onAdd(filter === 'ALL' ? categories[0].id : filter)}>
-          <Plus size={18} /> 새 업무 추가
-        </button>
-      </div>
+      {categories.length > 0 && (
+        <div className="table-actions" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <button className="btn-primary" onClick={() => onAdd(filter === 'ALL' ? categories[0].id : filter)}>
+            <Plus size={18} /> 새 업무 추가
+          </button>
+          {filter !== 'ALL' && onDeleteCategory && (
+            <button
+              className="btn-primary"
+              style={{ background: 'var(--bg-card)', color: '#EF4444', border: '1px solid var(--border-color)' }}
+              onClick={() => {
+                if (window.confirm('이 카테고리와 포함된 할 일이 모두 삭제됩니다. 계속할까요?')) {
+                  onDeleteCategory(filter);
+                  setFilter('ALL');
+                }
+              }}
+            >
+              <Trash2 size={16} /> 현재 카테고리 삭제
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

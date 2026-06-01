@@ -30,9 +30,13 @@ create table if not exists public.todos (
   notes       text default '',
   assignee    text default '',
   progress    text default '0',
+  link        text default '',
   position    int default 0,
   primary key (project_id, id)
 );
+
+-- 기존에 todos 테이블을 이미 만든 경우, link 컬럼만 추가 (벤치마킹/참고자료 URL용)
+alter table public.todos add column if not exists link text default '';
 
 create index if not exists todos_project_idx on public.todos (project_id);
 create index if not exists categories_project_idx on public.categories (project_id);

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
+
+const normalizeUrl = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
 
 const MindmapView = ({ categories, todos, onUpdate, rootName }) => {
   const [expandedCats, setExpandedCats] = useState({});
@@ -66,6 +68,11 @@ const MindmapView = ({ categories, todos, onUpdate, rootName }) => {
                         <span style={{ flex: 1, paddingLeft: '0.3rem' }}>
                           {todo.title}
                         </span>
+                        {todo.link ? (
+                          <a href={normalizeUrl(todo.link)} target="_blank" rel="noreferrer" title="링크 열기" style={{ color: 'var(--border-focus)', display: 'flex', alignItems: 'center' }}>
+                            <ExternalLink size={14} />
+                          </a>
+                        ) : null}
                       </div>
                     ))}
                   </div>
