@@ -1,28 +1,36 @@
 import React, { useState } from 'react';
 import { Trash2, Plus, ExternalLink, FolderPlus, Pencil } from 'lucide-react';
+import { categoryColor } from '../lib/colors';
 
 const normalizeUrl = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
 
-// 링크 셀: URL이 있으면 열기 아이콘만, 클릭하면 인라인 편집으로 전환
+// 링크 셀: URL이 있으면 열기 아이콘, 없으면 흐릿한 + 아이콘, 클릭 시 인라인 편집
 const LinkCell = ({ value, onChange }) => {
   const [editing, setEditing] = useState(false);
-  if (editing || !value) {
+  if (editing) {
     return (
       <input
         type="text"
-        autoFocus={editing}
+        autoFocus
         className="inline-input"
-        style={{ fontSize: '0.8rem', textAlign: 'center' }}
+        style={{ fontSize: '0.8rem' }}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         onBlur={() => setEditing(false)}
-        onKeyDown={(e) => { if (e.key === 'Enter') setEditing(false); }}
-        placeholder="URL"
+        onKeyDown={(e) => { if (e.key === 'Enter') setEditing(false); if (e.key === 'Escape') setEditing(false); }}
+        placeholder="URL 붙여넣기"
       />
     );
   }
+  if (!value) {
+    return (
+      <button className="btn-icon link-add" title="링크 추가" onClick={() => setEditing(true)}>
+        <Plus size={15} />
+      </button>
+    );
+  }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.15rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.1rem' }}>
       <a href={normalizeUrl(value)} target="_blank" rel="noreferrer" className="btn-icon" style={{ opacity: 1, color: 'var(--color-sky-blue)' }} title={value}>
         <ExternalLink size={16} />
       </a>
@@ -49,7 +57,7 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd, onAddCategory
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
-        <button className="btn-primary" style={{ background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }} onClick={handleAddCategory}>
+        <button className="btn-primary btn-light" onClick={handleAddCategory}>
           <FolderPlus size={18} /> 카테고리 추가
         </button>
         <select
@@ -100,13 +108,16 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd, onAddCategory
                     />
                   </td>
                   <td>
-                    <select
-                      className="inline-input badge"
-                      value={todo.categoryId}
-                      onChange={(e) => onUpdate(todo.id, { categoryId: e.target.value })}
-                    >
-                      {categories.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                    </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span className="cat-dot" style={{ background: categoryColor(todo.categoryId) }} />
+                      <select
+                        className="inline-input badge"
+                        value={todo.categoryId}
+                        onChange={(e) => onUpdate(todo.id, { categoryId: e.target.value })}
+                      >
+                        {categories.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                      </select>
+                    </div>
                   </td>
                   <td>
                     <input
@@ -175,8 +186,8 @@ const TableView = ({ categories, todos, onUpdate, onDelete, onAdd, onAddCategory
           </button>
           {filter !== 'ALL' && onDeleteCategory && (
             <button
-              className="btn-primary"
-              style={{ background: 'var(--bg-card)', color: '#EF4444', border: '1px solid var(--border-color)' }}
+              className="btn-primary btn-light"
+              style={{ color: 'var(--color-coral-red)' }}
               onClick={() => {
                 if (window.confirm('이 카테고리와 포함된 할 일이 모두 삭제됩니다. 계속할까요?')) {
                   onDeleteCategory(filter);

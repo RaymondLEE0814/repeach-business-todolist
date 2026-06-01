@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
+import { categoryColor } from '../lib/colors';
 
 const normalizeUrl = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
 
@@ -34,10 +35,11 @@ const MindmapView = ({ categories, todos, onUpdate, rootName }) => {
                   style={{ cursor: 'pointer', borderColor: isExpanded ? 'var(--text-main)' : 'var(--border-color)' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                    <div style={{ fontWeight: 600, fontSize: '1rem', color: isExpanded ? 'var(--text-main)' : 'inherit' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '1rem', color: isExpanded ? 'var(--text-main)' : 'inherit' }}>
+                      <span className="cat-dot" style={{ background: categoryColor(cat.id) }} />
                       {cat.name}
                     </div>
-                    {isExpanded ? <ChevronDown size={18} color="#6B7280" /> : <ChevronRight size={18} color="#6B7280" />}
+                    {isExpanded ? <ChevronDown size={18} color="var(--color-ash)" /> : <ChevronRight size={18} color="var(--color-ash)" />}
                   </div>
                   <div className="mm-progress">
                     <span>{completed}/{total}</span>
