@@ -400,6 +400,41 @@ ul { list-style: none; }
 }
 .ws-add-cat:hover { color: var(--color-ember-orange); border-color: var(--color-ember-orange); background: var(--color-parchment-card); }
 
+/* 뷰 전환 */
+.ws-viewtoggle { display: inline-flex; gap: 4px; background: var(--color-stone-surface); border-radius: var(--radius-buttons); padding: 4px; margin-bottom: 22px; }
+.ws-vbtn { font-size: 13px; font-weight: 600; color: var(--color-ash); padding: 8px 16px; border-radius: var(--radius-buttons); transition: background-color 0.2s ease, color 0.2s ease; }
+.ws-vbtn.active { background: #fff; color: var(--color-charcoal-primary); box-shadow: var(--shadow-subtle); }
+
+/* ---------- 마인드맵 뷰 ---------- */
+.mm { padding: 6px 0 24px; }
+.mm-root {
+  display: inline-block; background: var(--color-midnight); color: #fff;
+  font-family: var(--font-family); font-size: 22px; letter-spacing: -0.6px;
+  padding: 14px 22px; border-radius: 16px; margin-bottom: 6px;
+}
+.mm-branches { margin-left: 26px; border-left: 2px solid var(--color-stone-surface); }
+.mm-branch { position: relative; padding-left: 26px; margin-top: 16px; }
+.mm-branch::before { content: ''; position: absolute; left: 0; top: 26px; width: 24px; height: 2px; background: var(--color-stone-surface); }
+.mm-node {
+  display: block; width: 100%; max-width: 540px; text-align: left;
+  background: #fff; box-shadow: var(--shadow-subtle); border-left: 4px solid var(--color-fog);
+  border-radius: 12px; padding: 14px 18px; transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.mm-node:hover { box-shadow: var(--shadow-hover); transform: translateX(2px); }
+.mm-node-top { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+.mm-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.mm-node-name { font-size: 15px; font-weight: 600; color: var(--color-charcoal-primary); flex: 1; }
+.mm-caret { color: var(--color-ash); font-size: 13px; }
+.mm-node-prog { display: flex; align-items: center; gap: 10px; }
+.mm-mini { font-size: 12px; font-weight: 600; color: var(--color-ash); min-width: 38px; }
+.mm-mbar { flex: 1; height: 7px; border-radius: 5px; background: var(--color-stone-surface); overflow: hidden; }
+.mm-mfill { display: block; height: 100%; border-radius: 5px; transition: width 0.3s ease; }
+.mm-pct { font-size: 12px; font-weight: 600; color: var(--color-ash); min-width: 34px; text-align: right; }
+.mm-leaves { margin: 8px 0 0 26px; border-left: 2px dashed var(--color-stone-surface); padding-left: 20px; display: flex; flex-direction: column; gap: 2px; max-width: 520px; }
+.mm-leaf { position: relative; display: flex; align-items: flex-start; gap: 9px; padding: 8px 0; cursor: pointer; }
+.mm-leaf::before { content: ''; position: absolute; left: -20px; top: 17px; width: 18px; height: 2px; background: var(--color-stone-surface); }
+.mm-leaf input { position: absolute; opacity: 0; width: 0; height: 0; }
+
 /* ============================================================
    Responsive
    ============================================================ */

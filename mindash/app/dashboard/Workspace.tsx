@@ -17,6 +17,10 @@ type Todo = {
 
 const uid = () => globalThis.crypto.randomUUID();
 
+// 카테고리별 브랜치 색상 (Family 팔레트)
+const CAT_COLORS = ['#ff3e00', '#0090ff', '#00ca48', '#ffbb26', '#9f4fff', '#ff58ae', '#0086fc', '#00c978'];
+const catColor = (i: number) => CAT_COLORS[i % CAT_COLORS.length];
+
 export default function Workspace({
   initialProjects,
   userId,
@@ -30,6 +34,8 @@ export default function Workspace({
   const [categories, setCategories] = useState<Category[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [view, setView] = useState<'list' | 'mindmap'>('list');
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const load = useCallback(
     async (projectId: string) => {
@@ -235,10 +241,78 @@ export default function Workspace({
         )}
       </div>
 
+      {/* 뷰 전환: 목록 / 마인드맵 */}
+      <div className="ws-viewtoggle">
+        <button className={`ws-vbtn${view === 'list' ? ' active' : ''}`} onClick={() => setView('list')}>
+          ▦ 목록 뷰
+        </button>
+        <button className={`ws-vbtn${view === 'mindmap' ? ' active' : ''}`} onClick={() => setView('mindmap')}>
+          ⌗ 마인드맵 뷰
+        </button>
+      </div>
+
       {loading ? (
         <p className="muted" style={{ padding: '40px 0', textAlign: 'center' }}>
           불러오는 중…
         </p>
+      ) : view === 'mindmap' ? (
+        /* ---------- 마인드맵 뷰 ---------- */
+        <div className="mm">
+          <div className="mm-root">{activeProject?.name ?? '프로젝트'}</div>
+          <div className="mm-branches">
+            {categories.map((cat, i) => {
+              const items = todos.filter((t) => t.category_id === cat.id);
+              const cdone = items.filter((t) => t.completed).length;
+              const cpct = items.length ? Math.round((cdone / items.length) * 100) : 0;
+              const open = !!expanded[cat.id];
+              return (
+                <div className="mm-branch" key={cat.id}>
+                  <button
+                    className="mm-node"
+                    style={{ borderLeftColor: catColor(i) }}
+                    onClick={() => setExpanded((e) => ({ ...e, [cat.id]: !e[cat.id] }))}
+                  >
+                    <span className="mm-node-top">
+                      <span className="mm-dot" style={{ background: catColor(i) }} />
+                      <span className="mm-node-name">{cat.name}</span>
+                      <span className="mm-caret">{open ? '▾' : '▸'}</span>
+                    </span>
+                    <span className="mm-node-prog">
+                      <span className="mm-mini">
+                        {cdone}/{items.length}
+                      </span>
+                      <span className="mm-mbar">
+                        <span className="mm-mfill" style={{ width: `${cpct}%`, background: catColor(i) }} />
+                      </span>
+                      <span className="mm-pct">{cpct}%</span>
+                    </span>
+                  </button>
+                  {open && (
+                    <div className="mm-leaves">
+                      {items.map((t) => (
+                        <label className="mm-leaf" key={t.id}>
+                          <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
+                          <span className={`ws-check${t.completed ? ' done' : ''}`} />
+                          <span className={`ws-text${t.completed ? ' done' : ''}`}>
+                            {t.link ? (
+                              <a href={t.link} target="_blank" rel="noreferrer">
+                                {t.title}
+                              </a>
+                            ) : (
+                              t.title
+                            )}
+                          </span>
+                        </label>
+                      ))}
+                      {items.length === 0 && <p className="ws-empty">할 일 없음</p>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {categories.length === 0 && <p className="muted" style={{ marginLeft: 24 }}>카테고리가 없습니다. 목록 뷰에서 추가하세요.</p>}
+          </div>
+        </div>
       ) : (
         <div className="ws-cols">
           {categories.map((cat) => {
