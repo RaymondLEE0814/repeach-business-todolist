@@ -326,6 +326,53 @@ ul { list-style: none; }
 .dash-soon { display: inline-block; font-size: 12px; font-weight: 600; color: var(--color-deep-amber); background: #fff6e0; padding: 4px 10px; border-radius: 6px; margin-bottom: 14px; }
 
 /* ============================================================
+   Workspace (대시보드 — 기존 업무 공간 연결)
+   ============================================================ */
+.ws { }
+.ws-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+.ws-tab {
+  font-size: 14px; font-weight: 500; color: var(--color-graphite);
+  background: #fff; box-shadow: var(--shadow-subtle);
+  border-radius: var(--radius-buttons); padding: 9px 18px;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.ws-tab:hover { background: var(--color-parchment-card); }
+.ws-tab.active { background: var(--color-midnight); color: #fff; box-shadow: none; }
+
+.ws-stats { display: flex; align-items: center; gap: 16px; background: #fff; border-radius: var(--radius-cards); box-shadow: var(--shadow-subtle); padding: 18px 24px; margin-bottom: 24px; flex-wrap: wrap; }
+.ws-chip { display: flex; flex-direction: column; }
+.ws-num { font-family: var(--font-family); font-size: 28px; font-weight: 500; line-height: 1; color: var(--color-midnight); }
+.ws-label { font-size: 12px; color: var(--color-ash); margin-top: 4px; }
+.ws-progress { flex: 1; min-width: 180px; }
+.ws-progress-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.ws-pct { font-size: 15px; font-weight: 600; color: var(--color-ember-orange); }
+.ws-bar { height: 9px; border-radius: 6px; background: var(--color-stone-surface); overflow: hidden; }
+.ws-bar-fill { height: 100%; background: var(--color-meadow-green); border-radius: 6px; transition: width 0.3s ease; }
+
+.ws-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; align-items: start; }
+.ws-col { background: var(--color-parchment-card); border-radius: var(--radius-cards); padding: 16px; }
+.ws-col-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px; }
+.ws-col-name { font-size: 14px; font-weight: 600; color: var(--color-charcoal-primary); }
+.ws-col-count { font-size: 12px; font-weight: 600; color: var(--color-ash); background: #fff; border-radius: 10px; padding: 2px 9px; }
+.ws-list { display: flex; flex-direction: column; gap: 8px; }
+.ws-item {
+  display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
+  background: #fff; border-radius: 8px; box-shadow: var(--shadow-subtle);
+  padding: 11px 13px; transition: box-shadow 0.2s ease;
+}
+.ws-item:hover { box-shadow: var(--shadow-hover); }
+.ws-item input { position: absolute; opacity: 0; width: 0; height: 0; }
+.ws-check { width: 19px; height: 19px; border-radius: 6px; border: 2px solid var(--color-fog); flex-shrink: 0; margin-top: 1px; position: relative; transition: background-color 0.15s ease, border-color 0.15s ease; }
+.ws-check.done { background: var(--color-meadow-green); border-color: var(--color-meadow-green); }
+.ws-check.done::after { content: '✓'; color: #fff; font-size: 12px; font-weight: 700; position: absolute; top: -2px; left: 2px; }
+.ws-text { font-size: 14px; line-height: 1.4; color: var(--color-charcoal-primary); }
+.ws-text.done { color: var(--color-ash); text-decoration: line-through; }
+.ws-text a { color: var(--color-sky-blue); }
+.ws-text a:hover { text-decoration: underline; }
+.ws-assignee { display: inline-block; font-size: 11px; font-weight: 600; color: var(--color-ash); background: var(--color-stone-surface); border-radius: 8px; padding: 1px 7px; margin-left: 7px; vertical-align: middle; }
+.ws-empty { font-size: 13px; color: var(--color-smoke); padding: 6px 4px; }
+
+/* ============================================================
    Responsive
    ============================================================ */
 @media (max-width: 900px) {
