@@ -52,19 +52,9 @@ export default async function DashboardPage() {
           내 업무 공간입니다. 프로젝트를 전환하며 할 일을 확인하고 체크하세요.
         </p>
 
-        {projects && projects.length > 0 ? (
-          <div style={{ marginTop: 28 }}>
-            <Workspace projects={projects} />
-          </div>
-        ) : (
-          <div className="dash-card">
-            <span className="dash-soon">안내</span>
-            <h2 className="heading">표시할 프로젝트가 없습니다</h2>
-            <p className="body" style={{ marginTop: 10 }}>
-              아직 워크스페이스에 프로젝트가 없습니다.
-            </p>
-          </div>
-        )}
+        <div style={{ marginTop: 28 }}>
+          <Workspace initialProjects={projects ?? []} userId={user.id} />
+        </div>
       </main>
     </>
   );
