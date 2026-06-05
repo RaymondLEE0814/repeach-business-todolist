@@ -80,6 +80,14 @@ export default function Workspace({
   const [addingProject, setAddingProject] = useState(false);
   const [projName, setProjName] = useState('');
 
+  // 편집 폼 상태
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [eTitle, setETitle] = useState('');
+  const [eLink, setELink] = useState('');
+  const [eNotes, setENotes] = useState('');
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [eCatName, setECatName] = useState('');
+
   // 게임화 상태
   const [gDone, setGDone] = useState(0);
   const [confettiKey, setConfettiKey] = useState(0);
@@ -216,6 +224,61 @@ export default function Workspace({
     setTNotes('');
   };
 
+  // 할 일 편집
+  const openEdit = (t: Todo) => {
+    setEditingId(t.id);
+    setETitle(t.title);
+    setELink(t.link ?? '');
+    setENotes(t.notes ?? '');
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    const title = eTitle.trim();
+    if (!title) return;
+    const link = eLink.trim();
+    const notes = eNotes.trim();
+    const cur = todos.find((t) => t.id === editingId);
+    if (!cur) {
+      setEditingId(null);
+      return;
+    }
+    setTodos((prev) => prev.map((t) => (t.id === editingId ? { ...t, title, link, notes } : t)));
+    const { error } = await supabase
+      .from('todos')
+      .update({ title, link, notes })
+      .eq('id', editingId)
+      .eq('category_id', cur.category_id);
+    if (error) {
+      alert('수정 실패: ' + error.message);
+      if (activeId) load(activeId);
+    }
+    setEditingId(null);
+  };
+
+  // 카테고리 이름 변경
+  const openEditCat = (c: Category) => {
+    setEditingCatId(c.id);
+    setECatName(c.name);
+  };
+
+  const saveEditCat = async () => {
+    if (!editingCatId || !activeId) return;
+    const name = eCatName.trim();
+    if (!name) {
+      setEditingCatId(null);
+      return;
+    }
+    setCategories((prev) => prev.map((c) => (c.id === editingCatId ? { ...c, name } : c)));
+    const { error } = await supabase
+      .from('categories')
+      .update({ name })
+      .eq('project_id', activeId)
+      .eq('id', editingCatId);
+    if (error) alert('수정 실패: ' + error.message);
+    setEditingCatId(null);
+  };
+
   const deleteTodo = async (todo: Todo) => {
     setTodos((prev) => prev.filter((t) => t.id !== todo.id));
     if (todo.completed) setGDone((n) => Math.max(0, n - 1));
@@ -332,6 +395,50 @@ export default function Workspace({
         + 할 일 추가
       </button>
     );
+
+  // 할 일 편집 인라인 폼
+  const editTodoForm = () => (
+    <div className="ws-addform">
+      <input
+        className="ws-input"
+        autoFocus
+        placeholder="할 일 내용"
+        value={eTitle}
+        onChange={(e) => setETitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') saveEdit();
+          if (e.key === 'Escape') setEditingId(null);
+        }}
+      />
+      <input
+        className="ws-input"
+        placeholder="🔗 링크 (선택) — 예: example.com"
+        value={eLink}
+        onChange={(e) => setELink(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') saveEdit();
+          if (e.key === 'Escape') setEditingId(null);
+        }}
+      />
+      <textarea
+        className="ws-input ws-ta"
+        placeholder="📝 비고 (선택)"
+        value={eNotes}
+        onChange={(e) => setENotes(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setEditingId(null);
+        }}
+      />
+      <div className="ws-addform-actions">
+        <button className="btn btn-dark btn-sm" onClick={saveEdit}>
+          저장
+        </button>
+        <button className="btn btn-light btn-sm" onClick={() => setEditingId(null)}>
+          취소
+        </button>
+      </div>
+    </div>
+  );
 
   // ---------- 게임 바 ----------
   const gameBar = (
@@ -564,42 +671,69 @@ export default function Workspace({
                 return (
                   <div className="ws-col" key={cat.id}>
                     <div className="ws-col-head">
-                      <span className="ws-col-name">{cat.name}</span>
+                      {editingCatId === cat.id ? (
+                        <input
+                          className="ws-input"
+                          autoFocus
+                          value={eCatName}
+                          onChange={(e) => setECatName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveEditCat();
+                            if (e.key === 'Escape') setEditingCatId(null);
+                          }}
+                        />
+                      ) : (
+                        <span className="ws-col-name" onDoubleClick={() => openEditCat(cat)} title="더블클릭하여 이름 변경">
+                          {cat.name}
+                        </span>
+                      )}
                       <span className="ws-col-right">
                         <span className="ws-col-count">
                           {catDone}/{items.length}
                         </span>
+                        <button className="ws-edit" onClick={() => openEditCat(cat)} title="이름 변경">
+                          ✎
+                        </button>
                         <button className="ws-x" onClick={() => deleteCategory(cat)} title="카테고리 삭제">
                           ×
                         </button>
                       </span>
                     </div>
                     <div className="ws-list">
-                      {items.map((t) => (
-                        <div className="ws-item" key={t.id}>
-                          <label className="ws-item-main">
-                            <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
-                            <span className={`ws-check${t.completed ? ' done' : ''}`} />
-                            <span className="ws-text-wrap">
-                              <span className={`ws-text${t.completed ? ' done' : ''}`}>
-                                {t.link ? (
-                                  <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer">
-                                    {t.title}
-                                  </a>
-                                ) : (
-                                  t.title
-                                )}
-                                {t.assignee ? <span className="ws-assignee">{t.assignee}</span> : null}
+                      {items.map((t) =>
+                        editingId === t.id ? (
+                          <div key={t.id}>{editTodoForm()}</div>
+                        ) : (
+                          <div className="ws-item" key={t.id}>
+                            <label className="ws-item-main">
+                              <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
+                              <span className={`ws-check${t.completed ? ' done' : ''}`} />
+                              <span className="ws-text-wrap">
+                                <span className={`ws-text${t.completed ? ' done' : ''}`}>
+                                  {t.link ? (
+                                    <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer">
+                                      {t.title}
+                                    </a>
+                                  ) : (
+                                    t.title
+                                  )}
+                                  {t.assignee ? <span className="ws-assignee">{t.assignee}</span> : null}
+                                </span>
+                                {t.link ? <span className="ws-link">🔗 {t.link}</span> : null}
+                                {t.notes ? <span className="ws-note">{t.notes}</span> : null}
                               </span>
-                              {t.link ? <span className="ws-link">🔗 {t.link}</span> : null}
-                              {t.notes ? <span className="ws-note">{t.notes}</span> : null}
+                            </label>
+                            <span className="ws-item-actions">
+                              <button className="ws-edit" onClick={() => openEdit(t)} title="편집">
+                                ✎
+                              </button>
+                              <button className="ws-x" onClick={() => deleteTodo(t)} title="할 일 삭제">
+                                ×
+                              </button>
                             </span>
-                          </label>
-                          <button className="ws-x" onClick={() => deleteTodo(t)} title="할 일 삭제">
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                          </div>
+                        )
+                      )}
                       {addTodoForm(cat.id)}
                     </div>
                   </div>

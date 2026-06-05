@@ -392,7 +392,14 @@ ul { list-style: none; }
 .ws-tab-add:hover { background: #fff; color: var(--color-ember-orange); }
 .ws-del-project { font-size: 12px; color: var(--color-ash); background: transparent; padding: 6px 10px; border-radius: 8px; }
 .ws-del-project:hover { color: var(--color-coral-red); background: #ffeceb; }
-.ws-col-right { display: flex; align-items: center; gap: 6px; }
+.ws-col-right { display: flex; align-items: center; gap: 4px; }
+.ws-item-actions { display: flex; align-items: center; gap: 1px; flex-shrink: 0; }
+.ws-edit {
+  opacity: 0; color: var(--color-smoke); font-size: 13px; line-height: 1;
+  padding: 0 4px; flex-shrink: 0; transition: opacity 0.15s ease, color 0.15s ease;
+}
+.ws-item:hover .ws-edit, .ws-col-head:hover .ws-edit { opacity: 1; }
+.ws-edit:hover { color: var(--color-ember-orange); }
 .ws-item { position: relative; }
 .ws-item-main { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; flex: 1; }
 .ws-x {
