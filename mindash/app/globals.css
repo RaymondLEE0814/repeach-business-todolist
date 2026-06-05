@@ -436,6 +436,72 @@ ul { list-style: none; }
 .mm-leaf input { position: absolute; opacity: 0; width: 0; height: 0; }
 
 /* ============================================================
+   게임화 (XP / 레벨 / 칭호 / 업적 / 컨페티 / 토스트)
+   ============================================================ */
+.game-bar {
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  background: linear-gradient(180deg, #fff 0%, var(--color-parchment-card) 100%);
+  border-radius: var(--radius-cards-large); box-shadow: var(--shadow-subtle);
+  padding: 18px 24px; margin-bottom: 24px;
+}
+.game-level { display: flex; align-items: center; gap: 14px; min-width: 220px; }
+.game-icon {
+  width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 26px;
+  background: var(--color-warm-canvas); box-shadow: var(--shadow-subtle);
+}
+.game-title { font-size: 16px; color: var(--color-ash); letter-spacing: -0.3px; }
+.game-title b { color: var(--color-charcoal-primary); font-weight: 600; }
+.game-sub { font-size: 12px; color: var(--color-ash); margin-top: 3px; }
+.game-xp { flex: 1; min-width: 160px; }
+.game-xpbar { height: 12px; border-radius: 7px; background: var(--color-stone-surface); overflow: hidden; }
+.game-xpfill {
+  height: 100%; border-radius: 7px;
+  background: linear-gradient(90deg, var(--color-sunburst-yellow), var(--color-ember-orange));
+  transition: width 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+}
+.game-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.game-badge {
+  width: 36px; height: 36px; border-radius: 50%; font-size: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; box-shadow: var(--shadow-subtle); cursor: default;
+  animation: badge-pop 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+.game-badge-empty { font-size: 12px; color: var(--color-smoke); }
+@keyframes badge-pop { 0% { transform: scale(0); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+/* 컨페티 */
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 2000; }
+.confetti i {
+  position: absolute; left: 50%; top: 42%; width: 10px; height: 10px; border-radius: 2px;
+  opacity: 1; animation: confetti-fly 1000ms cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+@keyframes confetti-fly {
+  0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)); opacity: 0; }
+}
+
+/* 토스트 */
+.game-toast {
+  position: fixed; top: 84px; left: 50%; transform: translateX(-50%);
+  z-index: 2100; display: flex; align-items: center; gap: 14px;
+  background: var(--color-midnight); color: #fff;
+  border-radius: 16px; padding: 14px 22px 14px 16px; box-shadow: var(--shadow-lg);
+  animation: toast-in 0.45s cubic-bezier(0.19, 1, 0.22, 1);
+}
+.game-toast-icon {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 22px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.game-toast-title { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+.game-toast-sub { font-size: 12px; color: rgba(255, 255, 255, 0.7); margin-top: 2px; }
+@keyframes toast-in {
+  0% { transform: translate(-50%, -16px); opacity: 0; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+
+/* ============================================================
    Responsive
    ============================================================ */
 @media (max-width: 900px) {
