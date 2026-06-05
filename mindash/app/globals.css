@@ -408,6 +408,23 @@ ul { list-style: none; }
 }
 .ws-add:hover { color: var(--color-ember-orange); border-color: var(--color-ember-orange); background: #fff; }
 .ws-col-ghost { background: transparent; display: flex; align-items: flex-start; padding: 16px 0; }
+
+/* 인라인 입력 폼 (팝업 대체) + 링크/비고 표시 */
+.ws-text-wrap { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.ws-link { font-size: 12px; color: var(--color-sky-blue); word-break: break-all; }
+.ws-note { font-size: 12px; color: var(--color-ash); line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.ws-input {
+  width: 100%; font-family: inherit; font-size: 14px; color: var(--color-charcoal-primary);
+  background: var(--color-warm-canvas); border-radius: 8px; box-shadow: var(--shadow-subtle);
+  padding: 9px 11px; transition: box-shadow 0.15s ease;
+}
+.ws-input::placeholder { color: var(--color-smoke); }
+.ws-input:focus { outline: none; box-shadow: var(--color-ember-orange) 0px 0px 0px 2px inset; }
+.ws-ta { resize: vertical; min-height: 52px; line-height: 1.45; }
+.ws-addform { display: flex; flex-direction: column; gap: 7px; background: #fff; border-radius: 10px; box-shadow: var(--shadow-subtle); padding: 11px; }
+.ws-addform-actions { display: flex; gap: 6px; }
+.ws-addproj { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ws-addproj .ws-input { width: auto; min-width: 170px; }
 .ws-add-cat {
   font-size: 14px; font-weight: 600; color: var(--color-ash);
   width: 100%; padding: 16px; border-radius: var(--radius-cards);

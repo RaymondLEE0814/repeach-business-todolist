@@ -18,10 +18,12 @@ type Todo = {
   assignee: string | null;
   progress: string | null;
   link: string | null;
+  notes: string | null;
 };
 type Toast = { key: number; icon: string; title: string; sub?: string };
 
 const uid = () => globalThis.crypto.randomUUID();
+const normalizeUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : `https://${u}`);
 
 // 카테고리별 브랜치 색상 (Family 팔레트)
 const CAT_COLORS = ['#ff3e00', '#0090ff', '#00ca48', '#ffbb26', '#9f4fff', '#ff58ae', '#0086fc', '#00c978'];
@@ -68,12 +70,21 @@ export default function Workspace({
   const [view, setView] = useState<'list' | 'mindmap'>('list');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
+  // 인라인 입력 폼 상태
+  const [addingCat, setAddingCat] = useState<string | null>(null); // 할 일 추가 폼이 열린 카테고리
+  const [tTitle, setTTitle] = useState('');
+  const [tLink, setTLink] = useState('');
+  const [tNotes, setTNotes] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [catName, setCatName] = useState('');
+  const [addingProject, setAddingProject] = useState(false);
+  const [projName, setProjName] = useState('');
+
   // 게임화 상태
-  const [gDone, setGDone] = useState(0); // 전체 프로젝트 누적 완료 수
+  const [gDone, setGDone] = useState(0);
   const [confettiKey, setConfettiKey] = useState(0);
   const [toast, setToast] = useState<Toast | null>(null);
 
-  // 전체 완료 수 최초 로드 (RLS로 본인 소유만 집계됨)
   useEffect(() => {
     (async () => {
       const { count } = await supabase
@@ -84,7 +95,6 @@ export default function Workspace({
     })();
   }, [supabase]);
 
-  // 토스트 자동 사라짐
   useEffect(() => {
     if (!toast) return;
     const id = setTimeout(() => setToast(null), 3800);
@@ -98,7 +108,7 @@ export default function Workspace({
         supabase.from('categories').select('id,name').eq('project_id', projectId).order('position'),
         supabase
           .from('todos')
-          .select('id,category_id,title,completed,assignee,progress,link')
+          .select('id,category_id,title,completed,assignee,progress,link,notes')
           .eq('project_id', projectId)
           .order('position'),
       ]);
@@ -118,14 +128,16 @@ export default function Workspace({
   }, [activeId, load]);
 
   // ---------- 프로젝트 ----------
-  const addProject = async () => {
-    const name = window.prompt('새 프로젝트 이름')?.trim();
+  const submitProject = async () => {
+    const name = projName.trim();
     if (!name) return;
     const id = uid();
     const { error } = await supabase.from('projects').insert({ id, name, owner_id: userId });
     if (error) return alert('프로젝트 생성 실패: ' + error.message);
     setProjects((p) => [...p, { id, name }]);
     setActiveId(id);
+    setAddingProject(false);
+    setProjName('');
   };
 
   const deleteProject = async (project: Project) => {
@@ -142,9 +154,9 @@ export default function Workspace({
   };
 
   // ---------- 카테고리 ----------
-  const addCategory = async () => {
+  const submitCategory = async () => {
     if (!activeId) return;
-    const name = window.prompt('새 카테고리 이름')?.trim();
+    const name = catName.trim();
     if (!name) return;
     const id = uid();
     const { error } = await supabase
@@ -152,6 +164,8 @@ export default function Workspace({
       .insert({ project_id: activeId, id, name, position: categories.length });
     if (error) return alert('카테고리 생성 실패: ' + error.message);
     setCategories((c) => [...c, { id, name }]);
+    setAddingCategory(false);
+    setCatName('');
   };
 
   const deleteCategory = async (cat: Category) => {
@@ -165,25 +179,41 @@ export default function Workspace({
   };
 
   // ---------- 할 일 ----------
-  const addTodo = async (categoryId: string) => {
-    if (!activeId) return;
-    const title = window.prompt('할 일 내용')?.trim();
+  const openAddTodo = (categoryId: string) => {
+    setAddingCat(categoryId);
+    setTTitle('');
+    setTLink('');
+    setTNotes('');
+  };
+
+  const submitTodo = async () => {
+    if (!activeId || !addingCat) return;
+    const title = tTitle.trim();
     if (!title) return;
     const id = uid();
+    const link = tLink.trim();
+    const notes = tNotes.trim();
     const { error } = await supabase.from('todos').insert({
       project_id: activeId,
       id,
-      category_id: categoryId,
+      category_id: addingCat,
       title,
       completed: false,
-      notes: '',
+      notes,
       assignee: '',
       progress: '0',
-      link: '',
+      link,
       position: todos.length,
     });
     if (error) return alert('할 일 생성 실패: ' + error.message);
-    setTodos((t) => [...t, { id, category_id: categoryId, title, completed: false, assignee: '', progress: '0', link: '' }]);
+    setTodos((t) => [
+      ...t,
+      { id, category_id: addingCat, title, completed: false, assignee: '', progress: '0', link, notes },
+    ]);
+    setAddingCat(null);
+    setTTitle('');
+    setTLink('');
+    setTNotes('');
   };
 
   const deleteTodo = async (todo: Todo) => {
@@ -196,7 +226,6 @@ export default function Workspace({
     }
   };
 
-  // 완료 토글 + 게임화 보상
   const toggle = async (todo: Todo) => {
     const next = !todo.completed;
     const updated = todos.map((t) => (t.id === todo.id ? { ...t, completed: next } : t));
@@ -220,7 +249,6 @@ export default function Workspace({
     }
   };
 
-  // 보상 판정: 우선순위 레벨업 > 누적업적 > 프로젝트100% > 카테고리 올클리어
   const celebrate = (oldDone: number, newDone: number, updated: Todo[], todo: Todo) => {
     setConfettiKey((k) => k + 1);
     const before = levelInfo(oldDone);
@@ -255,6 +283,55 @@ export default function Workspace({
 
   const gi = levelInfo(gDone);
   const unlocked = countAchievementsUnlocked(gDone);
+
+  // 할 일 추가 인라인 폼
+  const addTodoForm = (categoryId: string) =>
+    addingCat === categoryId ? (
+      <div className="ws-addform">
+        <input
+          className="ws-input"
+          autoFocus
+          placeholder="할 일 내용"
+          value={tTitle}
+          onChange={(e) => setTTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') submitTodo();
+            if (e.key === 'Escape') setAddingCat(null);
+          }}
+        />
+        <input
+          className="ws-input"
+          placeholder="🔗 링크 (선택) — 예: example.com"
+          value={tLink}
+          onChange={(e) => setTLink(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') submitTodo();
+            if (e.key === 'Escape') setAddingCat(null);
+          }}
+        />
+        <textarea
+          className="ws-input ws-ta"
+          placeholder="📝 비고 (선택) — 메모를 남겨보세요"
+          value={tNotes}
+          onChange={(e) => setTNotes(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setAddingCat(null);
+          }}
+        />
+        <div className="ws-addform-actions">
+          <button className="btn btn-dark btn-sm" onClick={submitTodo}>
+            추가
+          </button>
+          <button className="btn btn-light btn-sm" onClick={() => setAddingCat(null)}>
+            취소
+          </button>
+        </div>
+      </div>
+    ) : (
+      <button className="ws-add" onClick={() => openAddTodo(categoryId)}>
+        + 할 일 추가
+      </button>
+    );
 
   // ---------- 게임 바 ----------
   const gameBar = (
@@ -310,9 +387,20 @@ export default function Workspace({
           <p className="body" style={{ margin: '10px 0 22px' }}>
             첫 프로젝트를 만들어 나만의 업무 공간을 시작하세요. 할 일을 완료할 때마다 XP와 칭호가 쌓입니다!
           </p>
-          <button className="btn btn-dark" onClick={addProject}>
-            + 새 프로젝트 만들기
-          </button>
+          <div className="ws-addproj" style={{ justifyContent: 'center' }}>
+            <input
+              className="ws-input"
+              placeholder="첫 프로젝트 이름"
+              value={projName}
+              onChange={(e) => setProjName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitProject();
+              }}
+            />
+            <button className="btn btn-dark btn-sm" onClick={submitProject}>
+              + 만들기
+            </button>
+          </div>
         </div>
       ) : (
         <div className="ws">
@@ -327,9 +415,37 @@ export default function Workspace({
                 {p.name}
               </button>
             ))}
-            <button className="ws-tab ws-tab-add" onClick={addProject}>
-              + 프로젝트
-            </button>
+            {addingProject ? (
+              <span className="ws-addproj">
+                <input
+                  className="ws-input"
+                  autoFocus
+                  placeholder="프로젝트 이름"
+                  value={projName}
+                  onChange={(e) => setProjName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') submitProject();
+                    if (e.key === 'Escape') setAddingProject(false);
+                  }}
+                />
+                <button className="btn btn-dark btn-sm" onClick={submitProject}>
+                  추가
+                </button>
+                <button className="btn btn-light btn-sm" onClick={() => setAddingProject(false)}>
+                  취소
+                </button>
+              </span>
+            ) : (
+              <button
+                className="ws-tab ws-tab-add"
+                onClick={() => {
+                  setAddingProject(true);
+                  setProjName('');
+                }}
+              >
+                + 프로젝트
+              </button>
+            )}
           </div>
 
           {/* 진행 현황 */}
@@ -412,14 +528,17 @@ export default function Workspace({
                             <label className="mm-leaf" key={t.id}>
                               <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
                               <span className={`ws-check${t.completed ? ' done' : ''}`} />
-                              <span className={`ws-text${t.completed ? ' done' : ''}`}>
-                                {t.link ? (
-                                  <a href={t.link} target="_blank" rel="noreferrer">
-                                    {t.title}
-                                  </a>
-                                ) : (
-                                  t.title
-                                )}
+                              <span className="ws-text-wrap">
+                                <span className={`ws-text${t.completed ? ' done' : ''}`}>
+                                  {t.link ? (
+                                    <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer">
+                                      {t.title}
+                                    </a>
+                                  ) : (
+                                    t.title
+                                  )}
+                                </span>
+                                {t.notes ? <span className="ws-note">{t.notes}</span> : null}
                               </span>
                             </label>
                           ))}
@@ -461,15 +580,19 @@ export default function Workspace({
                           <label className="ws-item-main">
                             <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
                             <span className={`ws-check${t.completed ? ' done' : ''}`} />
-                            <span className={`ws-text${t.completed ? ' done' : ''}`}>
-                              {t.link ? (
-                                <a href={t.link} target="_blank" rel="noreferrer">
-                                  {t.title}
-                                </a>
-                              ) : (
-                                t.title
-                              )}
-                              {t.assignee ? <span className="ws-assignee">{t.assignee}</span> : null}
+                            <span className="ws-text-wrap">
+                              <span className={`ws-text${t.completed ? ' done' : ''}`}>
+                                {t.link ? (
+                                  <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer">
+                                    {t.title}
+                                  </a>
+                                ) : (
+                                  t.title
+                                )}
+                                {t.assignee ? <span className="ws-assignee">{t.assignee}</span> : null}
+                              </span>
+                              {t.link ? <span className="ws-link">🔗 {t.link}</span> : null}
+                              {t.notes ? <span className="ws-note">{t.notes}</span> : null}
                             </span>
                           </label>
                           <button className="ws-x" onClick={() => deleteTodo(t)} title="할 일 삭제">
@@ -477,18 +600,46 @@ export default function Workspace({
                           </button>
                         </div>
                       ))}
-                      <button className="ws-add" onClick={() => addTodo(cat.id)}>
-                        + 할 일 추가
-                      </button>
+                      {addTodoForm(cat.id)}
                     </div>
                   </div>
                 );
               })}
 
               <div className="ws-col ws-col-ghost">
-                <button className="ws-add-cat" onClick={addCategory}>
-                  + 카테고리 추가
-                </button>
+                {addingCategory ? (
+                  <div className="ws-addform" style={{ width: '100%' }}>
+                    <input
+                      className="ws-input"
+                      autoFocus
+                      placeholder="카테고리 이름"
+                      value={catName}
+                      onChange={(e) => setCatName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') submitCategory();
+                        if (e.key === 'Escape') setAddingCategory(false);
+                      }}
+                    />
+                    <div className="ws-addform-actions">
+                      <button className="btn btn-dark btn-sm" onClick={submitCategory}>
+                        추가
+                      </button>
+                      <button className="btn btn-light btn-sm" onClick={() => setAddingCategory(false)}>
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    className="ws-add-cat"
+                    onClick={() => {
+                      setAddingCategory(true);
+                      setCatName('');
+                    }}
+                  >
+                    + 카테고리 추가
+                  </button>
+                )}
               </div>
             </div>
           )}
