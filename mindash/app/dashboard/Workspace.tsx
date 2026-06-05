@@ -151,6 +151,16 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
     }
   }, [activeId, load]);
 
+  // 챗봇이 데이터를 바꾸면 재로딩
+  useEffect(() => {
+    const h = () => {
+      refreshGlobalXp();
+      if (activeId) load(activeId);
+    };
+    window.addEventListener('mindash:data-changed', h);
+    return () => window.removeEventListener('mindash:data-changed', h);
+  }, [activeId, load, refreshGlobalXp]);
+
   // ---------- 프로젝트 ----------
   const submitProject = async () => {
     const name = projName.trim();

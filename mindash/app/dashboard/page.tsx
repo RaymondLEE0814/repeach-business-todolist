@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { signOut } from '@/app/actions/auth';
 import DashboardShell from './DashboardShell';
+import ChatWidget from './ChatWidget';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -56,6 +57,8 @@ export default async function DashboardPage() {
           <DashboardShell initialProjects={projects ?? []} userId={user.id} />
         </div>
       </main>
+
+      <ChatWidget />
     </>
   );
 }

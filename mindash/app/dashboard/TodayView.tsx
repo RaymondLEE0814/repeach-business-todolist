@@ -74,6 +74,13 @@ export default function TodayView({ projects }: { projects: Project[] }) {
     loadAll();
   }, [loadAll]);
 
+  // 챗봇이 데이터를 바꾸면 재로딩
+  useEffect(() => {
+    const h = () => loadAll();
+    window.addEventListener('mindash:data-changed', h);
+    return () => window.removeEventListener('mindash:data-changed', h);
+  }, [loadAll]);
+
   useEffect(() => {
     if (!toast) return;
     const id = setTimeout(() => setToast(null), 3800);

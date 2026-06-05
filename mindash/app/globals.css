@@ -682,6 +682,52 @@ ul { list-style: none; }
 }
 
 /* ============================================================
+   챗봇 위젯 (우하단 플로팅)
+   ============================================================ */
+.cs-fab {
+  position: fixed; right: 24px; bottom: 24px; z-index: 1500;
+  width: 58px; height: 58px; border-radius: 50%;
+  background: var(--color-midnight); color: #fff; font-size: 24px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: rgba(0,0,0,0.18) 0px 6px 20px; transition: transform 0.2s ease, background-color 0.2s ease;
+}
+.cs-fab:hover { transform: translateY(-2px) scale(1.04); background: var(--color-charcoal-primary); }
+.cs-chat {
+  position: fixed; right: 24px; bottom: 92px; z-index: 1500;
+  width: min(380px, calc(100vw - 32px)); height: min(560px, calc(100vh - 140px));
+  display: flex; flex-direction: column;
+  background: var(--color-warm-canvas); border-radius: 20px;
+  box-shadow: rgba(0,0,0,0.04) 0px 0px 0px 1px, rgba(0,0,0,0.16) 0px 12px 40px;
+  overflow: hidden; animation: cs-in 0.28s cubic-bezier(0.19, 1, 0.22, 1);
+}
+@keyframes cs-in { from { transform: translateY(16px) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.cs-chat-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: #fff; box-shadow: var(--shadow-nav); }
+.cs-title { font-weight: 600; font-size: 15px; color: var(--color-charcoal-primary); }
+.cs-close { font-size: 22px; color: var(--color-ash); line-height: 1; padding: 0 4px; }
+.cs-close:hover { color: var(--color-coral-red); }
+.cs-chat-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.cs-msg { max-width: 85%; font-size: 14px; line-height: 1.5; padding: 10px 13px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; }
+.cs-msg.user { align-self: flex-end; background: var(--color-midnight); color: #fff; border-bottom-right-radius: 5px; }
+.cs-msg.assistant { align-self: flex-start; background: #fff; color: var(--color-charcoal-primary); box-shadow: var(--shadow-subtle); border-bottom-left-radius: 5px; }
+.cs-msg.system { align-self: center; background: var(--color-parchment-card); color: var(--color-ash); font-size: 12.5px; text-align: center; max-width: 100%; }
+.cs-msg.log { align-self: flex-start; color: var(--color-ash); font-size: 13px; background: transparent; padding: 4px 13px; }
+.cs-msg.error { align-self: flex-start; background: #ffeceb; color: var(--color-coral-red); }
+.cs-chat-foot { display: flex; align-items: flex-end; gap: 8px; padding: 12px; background: #fff; box-shadow: rgba(0,0,0,0.04) 0px 0px 0px 1px; }
+.cs-chat-foot textarea {
+  flex: 1; resize: none; max-height: 120px; font-family: inherit; font-size: 14px;
+  color: var(--color-charcoal-primary); background: var(--color-warm-canvas);
+  border-radius: 14px; box-shadow: var(--shadow-subtle); padding: 11px 13px; line-height: 1.4;
+}
+.cs-chat-foot textarea:focus { outline: none; box-shadow: var(--color-ember-orange) 0px 0px 0px 2px inset; }
+.cs-btn {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--color-midnight); color: #fff; font-size: 18px;
+  display: flex; align-items: center; justify-content: center; transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+.cs-btn:hover { background: var(--color-charcoal-primary); }
+.cs-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ============================================================
    Responsive
    ============================================================ */
 @media (max-width: 900px) {
