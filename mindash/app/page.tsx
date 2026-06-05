@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Nav from '@/app/components/Nav';
 import BetaForm from '@/app/components/BetaForm';
+import HeroDecor from '@/app/components/HeroDecor';
 
 const FEATURES = [
   { icon: '⚡', bg: '#ffece6', color: '#ff3e00', title: '빠른 할 일 입력', desc: '떠오르는 일을 즉시 적고 나중에 정리하세요. 입력은 1초, 정리는 마인드맵에서.' },
@@ -55,34 +56,7 @@ export default function Home() {
 
       {/* ---------- Hero ---------- */}
       <header className="hero">
-        <div
-          className="blob"
-          style={{ width: 84, height: 84, background: '#ffbb26', top: 60, left: '8%' }}
-        >
-          <span className="blob-eyes">
-            <span /> <span />
-          </span>
-        </div>
-        <div
-          className="blob"
-          style={{ width: 64, height: 64, background: '#0090ff', top: 150, right: '10%', animationDelay: '1.2s' }}
-        >
-          <span className="blob-eyes">
-            <span /> <span />
-          </span>
-        </div>
-        <div
-          className="blob"
-          style={{ width: 52, height: 52, background: '#00ca48', bottom: 40, left: '16%', animationDelay: '0.6s' }}
-        >
-          <span className="blob-eyes">
-            <span /> <span />
-          </span>
-        </div>
-        <div
-          className="blob"
-          style={{ width: 44, height: 44, background: '#ff58ae', top: 90, right: '22%', animationDelay: '1.8s' }}
-        />
+        <HeroDecor />
 
         <div className="container hero-inner">
           <span className="eyebrow">개인과 작은 팀을 위한 프로젝트 일정관리</span>
