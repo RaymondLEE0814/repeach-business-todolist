@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { levelInfo, newlyUnlocked, xpForDifficulty, DIFFICULTY, SUBTASK_XP, type Difficulty } from '@/lib/gamification';
 import Confetti from './Confetti';
 import GameBar from './GameBar';
+import LevelUpOverlay, { type LevelUp } from './LevelUpOverlay';
 import { bucketOf, dueLabel, todayStr, type Bucket } from './dateUtils';
 
 type Project = { id: string; name: string };
@@ -40,6 +41,7 @@ export default function TodayView({ projects }: { projects: Project[] }) {
   const [gXp, setGXp] = useState(0);
   const [confettiKey, setConfettiKey] = useState(0);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [levelUp, setLevelUp] = useState<LevelUp | null>(null);
 
   const projName = useMemo(() => {
     const m: Record<string, string> = {};
@@ -91,7 +93,8 @@ export default function TodayView({ projects }: { projects: Project[] }) {
     const before = levelInfo(oldXp);
     const after = levelInfo(newXp);
     if (after.level > before.level) {
-      setToast({ key: newXp, icon: after.icon, title: `레벨 업! Lv.${after.level} ${after.title}`, sub: '새 칭호를 획득했어요 🎉' });
+      setLevelUp({ level: after.level, title: after.title, icon: after.icon });
+      for (let n = 1; n <= 2; n++) setTimeout(() => setConfettiKey((k) => k + 1), n * 250);
     } else {
       const ach = newlyUnlocked(gDone, gDone + 1);
       if (ach) setToast({ key: gDone + 1, icon: ach.icon, title: `업적 달성: ${ach.name}`, sub: ach.desc });
@@ -129,6 +132,7 @@ export default function TodayView({ projects }: { projects: Project[] }) {
   return (
     <>
       <Confetti fireKey={confettiKey} />
+      <LevelUpOverlay data={levelUp} onClose={() => setLevelUp(null)} />
       {toast && (
         <div className="game-toast" key={toast.key}>
           <span className="game-toast-icon">{toast.icon}</span>

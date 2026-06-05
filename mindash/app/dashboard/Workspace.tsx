@@ -13,6 +13,7 @@ import {
 } from '@/lib/gamification';
 import Confetti from './Confetti';
 import GameBar from './GameBar';
+import LevelUpOverlay, { type LevelUp } from './LevelUpOverlay';
 import { dueLabel, bucketOf } from './dateUtils';
 
 type Project = { id: string; name: string };
@@ -80,6 +81,7 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
   const [gXp, setGXp] = useState(0); // 누적 XP (난이도 가중 + 서브퀘스트)
   const [confettiKey, setConfettiKey] = useState(0);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [levelUp, setLevelUp] = useState<LevelUp | null>(null);
 
   // 전체 XP/완료수 재계산 (RLS로 본인 소유만 집계)
   const refreshGlobalXp = useCallback(async () => {
@@ -364,7 +366,8 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
     const after = levelInfo(newXp);
     let t: Toast | null = null;
     if (after.level > before.level) {
-      t = { key: newXp, icon: after.icon, title: `레벨 업! Lv.${after.level} ${after.title}`, sub: '새 칭호를 획득했어요 🎉' };
+      setLevelUp({ level: after.level, title: after.title, icon: after.icon });
+      for (let n = 1; n <= 2; n++) setTimeout(() => setConfettiKey((k) => k + 1), n * 250);
     } else {
       const ach = newlyUnlocked(oldDone, newDone);
       if (ach) {
@@ -665,6 +668,7 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
   return (
     <>
       <Confetti fireKey={confettiKey} />
+      <LevelUpOverlay data={levelUp} onClose={() => setLevelUp(null)} />
       {toast && (
         <div className="game-toast" key={toast.key}>
           <span className="game-toast-icon">{toast.icon}</span>
