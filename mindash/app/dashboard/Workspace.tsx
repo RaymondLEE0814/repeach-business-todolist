@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
   levelInfo,
-  countAchievementsUnlocked,
   newlyUnlocked,
   DIFFICULTY,
   DIFFICULTIES,
@@ -12,6 +11,9 @@ import {
   SUBTASK_XP,
   type Difficulty,
 } from '@/lib/gamification';
+import Confetti from './Confetti';
+import GameBar from './GameBar';
+import { dueLabel, bucketOf } from './dateUtils';
 
 type Project = { id: string; name: string };
 type Category = { id: string; name: string };
@@ -25,6 +27,7 @@ type Todo = {
   link: string | null;
   notes: string | null;
   difficulty: string | null;
+  due_date: string | null;
 };
 type Subtask = { id: string; todo_id: string; title: string; done: boolean };
 type Toast = { key: number; icon: string; title: string; sub?: string };
@@ -35,31 +38,6 @@ const diffOf = (d?: string | null): Difficulty => ((d as Difficulty) in DIFFICUL
 
 const CAT_COLORS = ['#ff3e00', '#0090ff', '#00ca48', '#ffbb26', '#9f4fff', '#ff58ae', '#0086fc', '#00c978'];
 const catColor = (i: number) => CAT_COLORS[i % CAT_COLORS.length];
-
-// ---------- 컨페티 ----------
-function Confetti({ fireKey }: { fireKey: number }) {
-  if (!fireKey) return null;
-  const colors = ['#ff3e00', '#0090ff', '#00ca48', '#ffbb26', '#9f4fff', '#ff58ae'];
-  return (
-    <div className="confetti" key={fireKey} aria-hidden>
-      {Array.from({ length: 30 }).map((_, i) => {
-        const angle = (Math.PI * 2 * i) / 30 + Math.random() * 0.5;
-        const dist = 120 + Math.random() * 200;
-        const tx = Math.cos(angle) * dist;
-        const ty = Math.sin(angle) * dist - 60;
-        const rot = Math.random() * 720 - 360;
-        const style = {
-          background: colors[i % colors.length],
-          animationDelay: `${Math.floor(Math.random() * 90)}ms`,
-          ['--tx']: `${tx.toFixed(0)}px`,
-          ['--ty']: `${ty.toFixed(0)}px`,
-          ['--rot']: `${rot.toFixed(0)}deg`,
-        } as CSSProperties;
-        return <i key={i} style={style} />;
-      })}
-    </div>
-  );
-}
 
 export default function Workspace({ initialProjects, userId }: { initialProjects: Project[]; userId: string }) {
   const supabase = createClient();
@@ -79,6 +57,7 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
   const [tLink, setTLink] = useState('');
   const [tNotes, setTNotes] = useState('');
   const [tDiff, setTDiff] = useState<Difficulty>('normal');
+  const [tDue, setTDue] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
   const [catName, setCatName] = useState('');
   const [addingProject, setAddingProject] = useState(false);
@@ -92,6 +71,7 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
   const [eLink, setELink] = useState('');
   const [eNotes, setENotes] = useState('');
   const [eDiff, setEDiff] = useState<Difficulty>('normal');
+  const [eDue, setEDue] = useState('');
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [eCatName, setECatName] = useState('');
 
@@ -135,20 +115,20 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
         supabase.from('categories').select('id,name').eq('project_id', projectId).order('position'),
         supabase
           .from('todos')
-          .select('id,category_id,title,completed,assignee,progress,link,notes,difficulty')
+          .select('id,category_id,title,completed,assignee,progress,link,notes,difficulty,due_date')
           .eq('project_id', projectId)
           .order('position'),
         supabase.from('subtasks').select('id,todo_id,title,done').eq('project_id', projectId).order('position'),
       ]);
       let tds = todoR.data as Todo[] | null;
       if (todoR.error) {
-        // 마이그레이션 전(difficulty 컬럼 없음) 폴백
+        // 마이그레이션 전(difficulty/due_date 컬럼 없음) 폴백
         const fb = await supabase
           .from('todos')
           .select('id,category_id,title,completed,assignee,progress,link,notes')
           .eq('project_id', projectId)
           .order('position');
-        tds = (fb.data ?? []).map((r) => ({ ...(r as Todo), difficulty: 'normal' }));
+        tds = (fb.data ?? []).map((r) => ({ ...(r as Todo), difficulty: 'normal', due_date: null }));
       }
       setCategories((catR.data as Category[]) ?? []);
       setTodos(tds ?? []);
@@ -249,6 +229,7 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
     setTLink('');
     setTNotes('');
     setTDiff('normal');
+    setTDue('');
   };
 
   const submitTodo = async () => {
@@ -269,18 +250,31 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
       progress: '0',
       link,
       difficulty: tDiff,
+      due_date: tDue || null,
       position: todos.length,
     });
     if (error) return alert('할 일 생성 실패: ' + error.message);
     setTodos((t) => [
       ...t,
-      { id, category_id: addingCat, title, completed: false, assignee: '', progress: '0', link, notes, difficulty: tDiff },
+      {
+        id,
+        category_id: addingCat,
+        title,
+        completed: false,
+        assignee: '',
+        progress: '0',
+        link,
+        notes,
+        difficulty: tDiff,
+        due_date: tDue || null,
+      },
     ]);
     setAddingCat(null);
     setTTitle('');
     setTLink('');
     setTNotes('');
     setTDiff('normal');
+    setTDue('');
   };
 
   const openEdit = (t: Todo) => {
@@ -289,6 +283,7 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
     setELink(t.link ?? '');
     setENotes(t.notes ?? '');
     setEDiff(diffOf(t.difficulty));
+    setEDue(t.due_date ?? '');
   };
 
   const saveEdit = async () => {
@@ -302,10 +297,12 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
       setEditingId(null);
       return;
     }
-    setTodos((prev) => prev.map((t) => (t.id === editingId ? { ...t, title, link, notes, difficulty: eDiff } : t)));
+    setTodos((prev) =>
+      prev.map((t) => (t.id === editingId ? { ...t, title, link, notes, difficulty: eDiff, due_date: eDue || null } : t))
+    );
     const { error } = await supabase
       .from('todos')
-      .update({ title, link, notes, difficulty: eDiff })
+      .update({ title, link, notes, difficulty: eDiff, due_date: eDue || null })
       .eq('id', editingId)
       .eq('category_id', cur.category_id);
     if (error) {
@@ -430,9 +427,6 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
   const pct = total ? Math.round((done / total) * 100) : 0;
   const activeProject = projects.find((p) => p.id === activeId) ?? null;
 
-  const gi = levelInfo(gXp);
-  const unlocked = countAchievementsUnlocked(gDone);
-
   // 난이도 선택 UI
   const diffSelector = (value: Difficulty, onChange: (d: Difficulty) => void) => (
     <div className="ws-diffsel">
@@ -466,6 +460,15 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
         />
         <div className="ws-difflabel">난이도 (완료 시 XP)</div>
         {diffSelector(tDiff, setTDiff)}
+        <div className="ws-daterow">
+          <span className="ws-difflabel">📅 계획일</span>
+          <input className="ws-input ws-date" type="date" value={tDue} onChange={(e) => setTDue(e.target.value)} />
+          {tDue && (
+            <button className="ws-date-clear" onClick={() => setTDue('')}>
+              지우기
+            </button>
+          )}
+        </div>
         <input
           className="ws-input"
           placeholder="🔗 링크 (선택) — 예: example.com"
@@ -515,6 +518,15 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
       />
       <div className="ws-difflabel">난이도</div>
       {diffSelector(eDiff, setEDiff)}
+      <div className="ws-daterow">
+        <span className="ws-difflabel">📅 계획일</span>
+        <input className="ws-input ws-date" type="date" value={eDue} onChange={(e) => setEDue(e.target.value)} />
+        {eDue && (
+          <button className="ws-date-clear" onClick={() => setEDue('')}>
+            지우기
+          </button>
+        )}
+      </div>
       <input
         className="ws-input"
         placeholder="🔗 링크 (선택)"
@@ -621,6 +633,9 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
                 ) : (
                   t.title
                 )}
+                {t.due_date && !t.completed && (
+                  <span className={`ws-due ws-due-${bucketOf(t.due_date)}`}>📅 {dueLabel(t.due_date)}</span>
+                )}
               </span>
               {t.link ? <span className="ws-link">🔗 {t.link}</span> : null}
               {t.notes ? <span className="ws-note">{t.notes}</span> : null}
@@ -647,38 +662,6 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
   };
 
   // ---------- 게임 바 ----------
-  const gameBar = (
-    <div className="game-bar">
-      <div className="game-level">
-        <span className="game-icon">{gi.icon}</span>
-        <div>
-          <div className="game-title">
-            Lv.{gi.level} <b>{gi.title}</b>
-          </div>
-          <div className="game-sub">
-            {gXp} XP · 완료 {gDone}개 · {gi.hasNext ? `다음 레벨까지 ${gi.xpForNext} XP` : '최고 레벨 달성'}
-          </div>
-        </div>
-      </div>
-      <div className="game-xp">
-        <div className="game-xpbar">
-          <div className="game-xpfill" style={{ width: `${gi.pct}%` }} />
-        </div>
-      </div>
-      <div className="game-badges">
-        {unlocked.length > 0 ? (
-          unlocked.map((a) => (
-            <span className="game-badge" key={a.id} title={`${a.name} — ${a.desc}`}>
-              {a.icon}
-            </span>
-          ))
-        ) : (
-          <span className="game-badge-empty">할 일을 완료하면 업적이 열려요</span>
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <>
       <Confetti fireKey={confettiKey} />
@@ -692,7 +675,7 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
         </div>
       )}
 
-      {gameBar}
+      <GameBar gXp={gXp} gDone={gDone} />
 
       {projects.length === 0 ? (
         <div className="dash-card" style={{ textAlign: 'center' }}>

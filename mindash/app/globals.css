@@ -507,6 +507,48 @@ ul { list-style: none; }
 .mm-leaf input { position: absolute; opacity: 0; width: 0; height: 0; }
 
 /* ============================================================
+   대시보드 모드 전환 + 오늘/이번 주 실행 화면
+   ============================================================ */
+.dash-modetabs { display: inline-flex; gap: 4px; background: var(--color-stone-surface); border-radius: var(--radius-buttons); padding: 5px; margin-bottom: 24px; }
+.dash-modebtn { font-size: 14px; font-weight: 600; color: var(--color-ash); padding: 9px 20px; border-radius: var(--radius-buttons); transition: background-color 0.2s ease, color 0.2s ease; }
+.dash-modebtn.active { background: var(--color-midnight); color: #fff; }
+
+/* 계획일 입력 */
+.ws-daterow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ws-date { width: auto; }
+.ws-date-clear { font-size: 12px; color: var(--color-ash); padding: 4px 6px; }
+.ws-date-clear:hover { color: var(--color-coral-red); }
+
+/* 계획일 뱃지 */
+.ws-due { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 5px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; line-height: 1.6; }
+.ws-due-overdue { background: #ffeceb; color: var(--color-coral-red); }
+.ws-due-today { background: #fff1dd; color: var(--color-deep-amber); }
+.ws-due-week { background: #e8f3ff; color: var(--color-sky-blue); }
+.ws-due-later { background: var(--color-stone-surface); color: var(--color-ash); }
+.ws-due-none { background: var(--color-stone-surface); color: var(--color-smoke); }
+
+/* 오늘/이번 주 화면 */
+.today-head { margin-bottom: 20px; }
+.today-head .heading { margin-bottom: 4px; }
+.today-bucket { margin-bottom: 26px; }
+.today-bucket-head { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 700; color: var(--color-charcoal-primary); margin-bottom: 12px; }
+.today-dot { width: 10px; height: 10px; border-radius: 50%; }
+.today-cnt { font-size: 12px; font-weight: 600; color: var(--color-ash); background: var(--color-stone-surface); border-radius: 10px; padding: 1px 9px; }
+.today-list { display: flex; flex-direction: column; gap: 8px; }
+.today-item { display: flex; align-items: flex-start; gap: 10px; background: #fff; border-radius: var(--radius-cards); box-shadow: var(--shadow-subtle); padding: 13px 16px; transition: box-shadow 0.2s ease; }
+.today-item:hover { box-shadow: var(--shadow-hover); }
+.today-main { display: flex; align-items: flex-start; gap: 11px; cursor: pointer; flex: 1; min-width: 0; }
+.today-main input { position: absolute; opacity: 0; width: 0; height: 0; }
+.today-text-wrap { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.today-text { font-size: 15px; color: var(--color-charcoal-primary); font-weight: 500; }
+.today-text a { color: var(--color-sky-blue); }
+.today-text a:hover { text-decoration: underline; }
+.today-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.today-proj { font-size: 11px; font-weight: 600; color: var(--color-ash); background: var(--color-parchment-card); border-radius: 6px; padding: 2px 8px; }
+.today-toToday { flex-shrink: 0; font-size: 12px; font-weight: 600; color: var(--color-ash); background: var(--color-warm-canvas); box-shadow: var(--shadow-subtle); border-radius: 14px; padding: 6px 12px; transition: color 0.15s ease, background-color 0.15s ease; }
+.today-toToday:hover { color: var(--color-ember-orange); background: #fff; }
+
+/* ============================================================
    게임화 (XP / 레벨 / 칭호 / 업적 / 컨페티 / 토스트)
    ============================================================ */
 .game-bar {
