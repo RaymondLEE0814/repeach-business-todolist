@@ -6,6 +6,11 @@ import {
   levelInfo,
   countAchievementsUnlocked,
   newlyUnlocked,
+  DIFFICULTY,
+  DIFFICULTIES,
+  xpForDifficulty,
+  SUBTASK_XP,
+  type Difficulty,
 } from '@/lib/gamification';
 
 type Project = { id: string; name: string };
@@ -19,13 +24,15 @@ type Todo = {
   progress: string | null;
   link: string | null;
   notes: string | null;
+  difficulty: string | null;
 };
+type Subtask = { id: string; todo_id: string; title: string; done: boolean };
 type Toast = { key: number; icon: string; title: string; sub?: string };
 
 const uid = () => globalThis.crypto.randomUUID();
 const normalizeUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : `https://${u}`);
+const diffOf = (d?: string | null): Difficulty => ((d as Difficulty) in DIFFICULTY ? (d as Difficulty) : 'normal');
 
-// 카테고리별 브랜치 색상 (Family 팔레트)
 const CAT_COLORS = ['#ff3e00', '#0090ff', '#00ca48', '#ffbb26', '#9f4fff', '#ff58ae', '#0086fc', '#00c978'];
 const catColor = (i: number) => CAT_COLORS[i % CAT_COLORS.length];
 
@@ -54,54 +61,66 @@ function Confetti({ fireKey }: { fireKey: number }) {
   );
 }
 
-export default function Workspace({
-  initialProjects,
-  userId,
-}: {
-  initialProjects: Project[];
-  userId: string;
-}) {
+export default function Workspace({ initialProjects, userId }: { initialProjects: Project[]; userId: string }) {
   const supabase = createClient();
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [activeId, setActiveId] = useState<string | null>(initialProjects[0]?.id ?? null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [subtasks, setSubtasks] = useState<Record<string, Subtask[]>>({});
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<'list' | 'mindmap'>('list');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [openChecklist, setOpenChecklist] = useState<Record<string, boolean>>({});
 
-  // 인라인 입력 폼 상태
-  const [addingCat, setAddingCat] = useState<string | null>(null); // 할 일 추가 폼이 열린 카테고리
+  // 추가 폼 상태
+  const [addingCat, setAddingCat] = useState<string | null>(null);
   const [tTitle, setTTitle] = useState('');
   const [tLink, setTLink] = useState('');
   const [tNotes, setTNotes] = useState('');
+  const [tDiff, setTDiff] = useState<Difficulty>('normal');
   const [addingCategory, setAddingCategory] = useState(false);
   const [catName, setCatName] = useState('');
   const [addingProject, setAddingProject] = useState(false);
   const [projName, setProjName] = useState('');
+  const [addingSubFor, setAddingSubFor] = useState<string | null>(null);
+  const [sTitle, setSTitle] = useState('');
 
   // 편집 폼 상태
   const [editingId, setEditingId] = useState<string | null>(null);
   const [eTitle, setETitle] = useState('');
   const [eLink, setELink] = useState('');
   const [eNotes, setENotes] = useState('');
+  const [eDiff, setEDiff] = useState<Difficulty>('normal');
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [eCatName, setECatName] = useState('');
 
   // 게임화 상태
-  const [gDone, setGDone] = useState(0);
+  const [gDone, setGDone] = useState(0); // 완료한 할 일 개수 (업적용)
+  const [gXp, setGXp] = useState(0); // 누적 XP (난이도 가중 + 서브퀘스트)
   const [confettiKey, setConfettiKey] = useState(0);
   const [toast, setToast] = useState<Toast | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const { count } = await supabase
-        .from('todos')
-        .select('*', { count: 'exact', head: true })
-        .eq('completed', true);
+  // 전체 XP/완료수 재계산 (RLS로 본인 소유만 집계)
+  const refreshGlobalXp = useCallback(async () => {
+    const { data: doneTodos, error } = await supabase.from('todos').select('difficulty').eq('completed', true);
+    if (error) {
+      // 마이그레이션 전(difficulty 컬럼 없음) 폴백: 개수 × 10
+      const { count } = await supabase.from('todos').select('*', { count: 'exact', head: true }).eq('completed', true);
       setGDone(count ?? 0);
-    })();
+      setGXp((count ?? 0) * 10);
+      return;
+    }
+    const base = (doneTodos ?? []).reduce((s, r) => s + xpForDifficulty(r.difficulty), 0);
+    const subRes = await supabase.from('subtasks').select('*', { count: 'exact', head: true }).eq('done', true);
+    const subDone = subRes.error ? 0 : subRes.count ?? 0;
+    setGDone((doneTodos ?? []).length);
+    setGXp(base + SUBTASK_XP * subDone);
   }, [supabase]);
+
+  useEffect(() => {
+    refreshGlobalXp();
+  }, [refreshGlobalXp]);
 
   useEffect(() => {
     if (!toast) return;
@@ -112,16 +131,30 @@ export default function Workspace({
   const load = useCallback(
     async (projectId: string) => {
       setLoading(true);
-      const [{ data: cats }, { data: tds }] = await Promise.all([
+      const [catR, todoR, subR] = await Promise.all([
         supabase.from('categories').select('id,name').eq('project_id', projectId).order('position'),
         supabase
           .from('todos')
-          .select('id,category_id,title,completed,assignee,progress,link,notes')
+          .select('id,category_id,title,completed,assignee,progress,link,notes,difficulty')
           .eq('project_id', projectId)
           .order('position'),
+        supabase.from('subtasks').select('id,todo_id,title,done').eq('project_id', projectId).order('position'),
       ]);
-      setCategories((cats as Category[]) ?? []);
-      setTodos((tds as Todo[]) ?? []);
+      let tds = todoR.data as Todo[] | null;
+      if (todoR.error) {
+        // 마이그레이션 전(difficulty 컬럼 없음) 폴백
+        const fb = await supabase
+          .from('todos')
+          .select('id,category_id,title,completed,assignee,progress,link,notes')
+          .eq('project_id', projectId)
+          .order('position');
+        tds = (fb.data ?? []).map((r) => ({ ...(r as Todo), difficulty: 'normal' }));
+      }
+      setCategories((catR.data as Category[]) ?? []);
+      setTodos(tds ?? []);
+      const grouped: Record<string, Subtask[]> = {};
+      if (!subR.error) ((subR.data as Subtask[]) ?? []).forEach((s) => (grouped[s.todo_id] ??= []).push(s));
+      setSubtasks(grouped);
       setLoading(false);
     },
     [supabase]
@@ -132,6 +165,7 @@ export default function Workspace({
     else {
       setCategories([]);
       setTodos([]);
+      setSubtasks({});
     }
   }, [activeId, load]);
 
@@ -150,6 +184,7 @@ export default function Workspace({
 
   const deleteProject = async (project: Project) => {
     if (!window.confirm(`'${project.name}' 프로젝트를 삭제할까요? 안의 할 일도 모두 삭제됩니다.`)) return;
+    await supabase.from('subtasks').delete().eq('project_id', project.id);
     await supabase.from('todos').delete().eq('project_id', project.id);
     await supabase.from('categories').delete().eq('project_id', project.id);
     const { error } = await supabase.from('projects').delete().eq('id', project.id);
@@ -159,6 +194,7 @@ export default function Workspace({
       if (activeId === project.id) setActiveId(next[0]?.id ?? null);
       return next;
     });
+    refreshGlobalXp();
   };
 
   // ---------- 카테고리 ----------
@@ -179,11 +215,31 @@ export default function Workspace({
   const deleteCategory = async (cat: Category) => {
     if (!activeId) return;
     if (!window.confirm(`'${cat.name}' 카테고리와 그 안의 할 일을 삭제할까요?`)) return;
+    const ids = todos.filter((t) => t.category_id === cat.id).map((t) => t.id);
+    if (ids.length) await supabase.from('subtasks').delete().eq('project_id', activeId).in('todo_id', ids);
     await supabase.from('todos').delete().eq('project_id', activeId).eq('category_id', cat.id);
     const { error } = await supabase.from('categories').delete().eq('project_id', activeId).eq('id', cat.id);
     if (error) return alert('삭제 실패: ' + error.message);
     setCategories((prev) => prev.filter((c) => c.id !== cat.id));
     setTodos((prev) => prev.filter((t) => t.category_id !== cat.id));
+    refreshGlobalXp();
+  };
+
+  const openEditCat = (c: Category) => {
+    setEditingCatId(c.id);
+    setECatName(c.name);
+  };
+  const saveEditCat = async () => {
+    if (!editingCatId || !activeId) return;
+    const name = eCatName.trim();
+    if (!name) {
+      setEditingCatId(null);
+      return;
+    }
+    setCategories((prev) => prev.map((c) => (c.id === editingCatId ? { ...c, name } : c)));
+    const { error } = await supabase.from('categories').update({ name }).eq('project_id', activeId).eq('id', editingCatId);
+    if (error) alert('수정 실패: ' + error.message);
+    setEditingCatId(null);
   };
 
   // ---------- 할 일 ----------
@@ -192,6 +248,7 @@ export default function Workspace({
     setTTitle('');
     setTLink('');
     setTNotes('');
+    setTDiff('normal');
   };
 
   const submitTodo = async () => {
@@ -211,25 +268,27 @@ export default function Workspace({
       assignee: '',
       progress: '0',
       link,
+      difficulty: tDiff,
       position: todos.length,
     });
     if (error) return alert('할 일 생성 실패: ' + error.message);
     setTodos((t) => [
       ...t,
-      { id, category_id: addingCat, title, completed: false, assignee: '', progress: '0', link, notes },
+      { id, category_id: addingCat, title, completed: false, assignee: '', progress: '0', link, notes, difficulty: tDiff },
     ]);
     setAddingCat(null);
     setTTitle('');
     setTLink('');
     setTNotes('');
+    setTDiff('normal');
   };
 
-  // 할 일 편집
   const openEdit = (t: Todo) => {
     setEditingId(t.id);
     setETitle(t.title);
     setELink(t.link ?? '');
     setENotes(t.notes ?? '');
+    setEDiff(diffOf(t.difficulty));
   };
 
   const saveEdit = async () => {
@@ -243,50 +302,35 @@ export default function Workspace({
       setEditingId(null);
       return;
     }
-    setTodos((prev) => prev.map((t) => (t.id === editingId ? { ...t, title, link, notes } : t)));
+    setTodos((prev) => prev.map((t) => (t.id === editingId ? { ...t, title, link, notes, difficulty: eDiff } : t)));
     const { error } = await supabase
       .from('todos')
-      .update({ title, link, notes })
+      .update({ title, link, notes, difficulty: eDiff })
       .eq('id', editingId)
       .eq('category_id', cur.category_id);
     if (error) {
       alert('수정 실패: ' + error.message);
       if (activeId) load(activeId);
     }
+    // 완료된 할 일의 난이도가 바뀌면 XP 재계산
+    if (cur.completed && diffOf(cur.difficulty) !== eDiff) refreshGlobalXp();
     setEditingId(null);
-  };
-
-  // 카테고리 이름 변경
-  const openEditCat = (c: Category) => {
-    setEditingCatId(c.id);
-    setECatName(c.name);
-  };
-
-  const saveEditCat = async () => {
-    if (!editingCatId || !activeId) return;
-    const name = eCatName.trim();
-    if (!name) {
-      setEditingCatId(null);
-      return;
-    }
-    setCategories((prev) => prev.map((c) => (c.id === editingCatId ? { ...c, name } : c)));
-    const { error } = await supabase
-      .from('categories')
-      .update({ name })
-      .eq('project_id', activeId)
-      .eq('id', editingCatId);
-    if (error) alert('수정 실패: ' + error.message);
-    setEditingCatId(null);
   };
 
   const deleteTodo = async (todo: Todo) => {
     setTodos((prev) => prev.filter((t) => t.id !== todo.id));
-    if (todo.completed) setGDone((n) => Math.max(0, n - 1));
+    setSubtasks((prev) => {
+      const next = { ...prev };
+      delete next[todo.id];
+      return next;
+    });
+    await supabase.from('subtasks').delete().eq('todo_id', todo.id);
     const { error } = await supabase.from('todos').delete().eq('id', todo.id).eq('category_id', todo.category_id);
     if (error) {
       alert('삭제 실패: ' + error.message);
       if (activeId) load(activeId);
     }
+    refreshGlobalXp();
   };
 
   const toggle = async (todo: Todo) => {
@@ -294,11 +338,15 @@ export default function Workspace({
     const updated = todos.map((t) => (t.id === todo.id ? { ...t, completed: next } : t));
     const prevTodos = todos;
     const prevGDone = gDone;
+    const prevGXp = gXp;
+    const dxp = xpForDifficulty(todo.difficulty);
     const newGDone = Math.max(0, gDone + (next ? 1 : -1));
+    const newGXp = Math.max(0, gXp + (next ? dxp : -dxp));
     setTodos(updated);
     setGDone(newGDone);
+    setGXp(newGXp);
 
-    if (next) celebrate(prevGDone, newGDone, updated, todo);
+    if (next) celebrate(prevGDone, newGDone, prevGXp, newGXp, updated, todo);
 
     const { error } = await supabase
       .from('todos')
@@ -308,18 +356,18 @@ export default function Workspace({
     if (error) {
       setTodos(prevTodos);
       setGDone(prevGDone);
+      setGXp(prevGXp);
       alert('저장에 실패했습니다: ' + error.message);
     }
   };
 
-  const celebrate = (oldDone: number, newDone: number, updated: Todo[], todo: Todo) => {
+  const celebrate = (oldDone: number, newDone: number, oldXp: number, newXp: number, updated: Todo[], todo: Todo) => {
     setConfettiKey((k) => k + 1);
-    const before = levelInfo(oldDone);
-    const after = levelInfo(newDone);
+    const before = levelInfo(oldXp);
+    const after = levelInfo(newXp);
     let t: Toast | null = null;
-
     if (after.level > before.level) {
-      t = { key: newDone, icon: after.icon, title: `레벨 업! Lv.${after.level} ${after.title}`, sub: '새 칭호를 획득했어요 🎉' };
+      t = { key: newXp, icon: after.icon, title: `레벨 업! Lv.${after.level} ${after.title}`, sub: '새 칭호를 획득했어요 🎉' };
     } else {
       const ach = newlyUnlocked(oldDone, newDone);
       if (ach) {
@@ -339,15 +387,69 @@ export default function Workspace({
     if (t) setToast(t);
   };
 
+  // ---------- 서브 퀘스트(체크리스트) ----------
+  const submitSubtask = async (todoId: string) => {
+    if (!activeId) return;
+    const title = sTitle.trim();
+    if (!title) return;
+    const id = uid();
+    const list = subtasks[todoId] ?? [];
+    const { error } = await supabase
+      .from('subtasks')
+      .insert({ id, todo_id: todoId, project_id: activeId, title, done: false, position: list.length });
+    if (error) return alert('단계 추가 실패: ' + error.message);
+    setSubtasks((prev) => ({ ...prev, [todoId]: [...(prev[todoId] ?? []), { id, todo_id: todoId, title, done: false }] }));
+    setSTitle('');
+  };
+
+  const toggleSubtask = async (st: Subtask) => {
+    const next = !st.done;
+    setSubtasks((prev) => ({
+      ...prev,
+      [st.todo_id]: (prev[st.todo_id] ?? []).map((x) => (x.id === st.id ? { ...x, done: next } : x)),
+    }));
+    setGXp((x) => Math.max(0, x + (next ? SUBTASK_XP : -SUBTASK_XP)));
+    const { error } = await supabase.from('subtasks').update({ done: next }).eq('id', st.id);
+    if (error) {
+      setSubtasks((prev) => ({
+        ...prev,
+        [st.todo_id]: (prev[st.todo_id] ?? []).map((x) => (x.id === st.id ? { ...x, done: !next } : x)),
+      }));
+      setGXp((x) => Math.max(0, x + (next ? -SUBTASK_XP : SUBTASK_XP)));
+    }
+  };
+
+  const deleteSubtask = async (st: Subtask) => {
+    if (st.done) setGXp((x) => Math.max(0, x - SUBTASK_XP));
+    setSubtasks((prev) => ({ ...prev, [st.todo_id]: (prev[st.todo_id] ?? []).filter((x) => x.id !== st.id) }));
+    await supabase.from('subtasks').delete().eq('id', st.id);
+  };
+
   const total = todos.length;
   const done = todos.filter((t) => t.completed).length;
   const pct = total ? Math.round((done / total) * 100) : 0;
   const activeProject = projects.find((p) => p.id === activeId) ?? null;
 
-  const gi = levelInfo(gDone);
+  const gi = levelInfo(gXp);
   const unlocked = countAchievementsUnlocked(gDone);
 
-  // 할 일 추가 인라인 폼
+  // 난이도 선택 UI
+  const diffSelector = (value: Difficulty, onChange: (d: Difficulty) => void) => (
+    <div className="ws-diffsel">
+      {DIFFICULTIES.map((d) => (
+        <button
+          key={d}
+          type="button"
+          className={`ws-diffbtn${value === d ? ' active' : ''}`}
+          style={value === d ? { borderColor: DIFFICULTY[d].color, color: DIFFICULTY[d].color } : undefined}
+          onClick={() => onChange(d)}
+        >
+          {DIFFICULTY[d].label} <small>+{DIFFICULTY[d].xp}</small>
+        </button>
+      ))}
+    </div>
+  );
+
   const addTodoForm = (categoryId: string) =>
     addingCat === categoryId ? (
       <div className="ws-addform">
@@ -362,6 +464,8 @@ export default function Workspace({
             if (e.key === 'Escape') setAddingCat(null);
           }}
         />
+        <div className="ws-difflabel">난이도 (완료 시 XP)</div>
+        {diffSelector(tDiff, setTDiff)}
         <input
           className="ws-input"
           placeholder="🔗 링크 (선택) — 예: example.com"
@@ -374,7 +478,7 @@ export default function Workspace({
         />
         <textarea
           className="ws-input ws-ta"
-          placeholder="📝 비고 (선택) — 메모를 남겨보세요"
+          placeholder="📝 비고 (선택)"
           value={tNotes}
           onChange={(e) => setTNotes(e.target.value)}
           onKeyDown={(e) => {
@@ -396,7 +500,6 @@ export default function Workspace({
       </button>
     );
 
-  // 할 일 편집 인라인 폼
   const editTodoForm = () => (
     <div className="ws-addform">
       <input
@@ -410,9 +513,11 @@ export default function Workspace({
           if (e.key === 'Escape') setEditingId(null);
         }}
       />
+      <div className="ws-difflabel">난이도</div>
+      {diffSelector(eDiff, setEDiff)}
       <input
         className="ws-input"
-        placeholder="🔗 링크 (선택) — 예: example.com"
+        placeholder="🔗 링크 (선택)"
         value={eLink}
         onChange={(e) => setELink(e.target.value)}
         onKeyDown={(e) => {
@@ -440,6 +545,107 @@ export default function Workspace({
     </div>
   );
 
+  // 체크리스트 패널
+  const checklistPanel = (t: Todo) => {
+    const list = subtasks[t.id] ?? [];
+    return (
+      <div className="ws-checklist">
+        {list.map((st) => (
+          <div className="ws-sub" key={st.id}>
+            <label className="ws-sub-main">
+              <input type="checkbox" checked={st.done} onChange={() => toggleSubtask(st)} />
+              <span className={`ws-check ws-check-sm${st.done ? ' done' : ''}`} />
+              <span className={`ws-sub-text${st.done ? ' done' : ''}`}>{st.title}</span>
+            </label>
+            <button className="ws-x" onClick={() => deleteSubtask(st)} title="단계 삭제">
+              ×
+            </button>
+          </div>
+        ))}
+        {addingSubFor === t.id ? (
+          <div className="ws-sub-add">
+            <input
+              className="ws-input"
+              autoFocus
+              placeholder="세부 단계 (Enter로 연속 추가)"
+              value={sTitle}
+              onChange={(e) => setSTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitSubtask(t.id);
+                if (e.key === 'Escape') setAddingSubFor(null);
+              }}
+            />
+            <button className="btn btn-light btn-sm" onClick={() => setAddingSubFor(null)}>
+              완료
+            </button>
+          </div>
+        ) : (
+          <button
+            className="ws-sub-addbtn"
+            onClick={() => {
+              setAddingSubFor(t.id);
+              setSTitle('');
+            }}
+          >
+            + 단계 추가 (+{SUBTASK_XP} XP)
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  // 할 일 한 줄 (목록 뷰)
+  const renderTodo = (t: Todo) => {
+    const subs = subtasks[t.id] ?? [];
+    const subDone = subs.filter((s) => s.done).length;
+    const d = diffOf(t.difficulty);
+    const open = !!openChecklist[t.id];
+    if (editingId === t.id) return <div key={t.id}>{editTodoForm()}</div>;
+    return (
+      <div className="ws-item-wrap" key={t.id}>
+        <div className="ws-item">
+          <label className="ws-item-main">
+            <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
+            <span className={`ws-check${t.completed ? ' done' : ''}`} />
+            <span className="ws-text-wrap">
+              <span className={`ws-text${t.completed ? ' done' : ''}`}>
+                {d !== 'normal' && (
+                  <span className="ws-diff" style={{ color: DIFFICULTY[d].color, borderColor: DIFFICULTY[d].color }}>
+                    {DIFFICULTY[d].label}
+                  </span>
+                )}
+                {t.link ? (
+                  <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer">
+                    {t.title}
+                  </a>
+                ) : (
+                  t.title
+                )}
+              </span>
+              {t.link ? <span className="ws-link">🔗 {t.link}</span> : null}
+              {t.notes ? <span className="ws-note">{t.notes}</span> : null}
+              <button
+                className="ws-sub-toggle"
+                onClick={() => setOpenChecklist((o) => ({ ...o, [t.id]: !o[t.id] }))}
+              >
+                {subs.length > 0 ? `☑ 체크리스트 ${subDone}/${subs.length}` : '＋ 체크리스트'} {open ? '▾' : '▸'}
+              </button>
+            </span>
+          </label>
+          <span className="ws-item-actions">
+            <button className="ws-edit" onClick={() => openEdit(t)} title="편집">
+              ✎
+            </button>
+            <button className="ws-x" onClick={() => deleteTodo(t)} title="할 일 삭제">
+              ×
+            </button>
+          </span>
+        </div>
+        {open && checklistPanel(t)}
+      </div>
+    );
+  };
+
   // ---------- 게임 바 ----------
   const gameBar = (
     <div className="game-bar">
@@ -450,7 +656,7 @@ export default function Workspace({
             Lv.{gi.level} <b>{gi.title}</b>
           </div>
           <div className="game-sub">
-            전체 완료 {gDone}개 · {gi.hasNext ? `다음 레벨까지 ${gi.xpForNext} XP` : '최고 레벨 달성'}
+            {gXp} XP · 완료 {gDone}개 · {gi.hasNext ? `다음 레벨까지 ${gi.xpForNext} XP` : '최고 레벨 달성'}
           </div>
         </div>
       </div>
@@ -511,14 +717,9 @@ export default function Workspace({
         </div>
       ) : (
         <div className="ws">
-          {/* 프로젝트 전환 탭 */}
           <div className="ws-tabs">
             {projects.map((p) => (
-              <button
-                key={p.id}
-                className={`ws-tab${p.id === activeId ? ' active' : ''}`}
-                onClick={() => setActiveId(p.id)}
-              >
+              <button key={p.id} className={`ws-tab${p.id === activeId ? ' active' : ''}`} onClick={() => setActiveId(p.id)}>
                 {p.name}
               </button>
             ))}
@@ -555,7 +756,6 @@ export default function Workspace({
             )}
           </div>
 
-          {/* 진행 현황 */}
           <div className="ws-stats">
             <div className="ws-chip">
               <span className="ws-num">{total}</span>
@@ -583,7 +783,6 @@ export default function Workspace({
             )}
           </div>
 
-          {/* 뷰 전환 */}
           <div className="ws-viewtoggle">
             <button className={`ws-vbtn${view === 'list' ? ' active' : ''}`} onClick={() => setView('list')}>
               ▦ 목록 뷰
@@ -598,7 +797,6 @@ export default function Workspace({
               불러오는 중…
             </p>
           ) : view === 'mindmap' ? (
-            /* ---------- 마인드맵 뷰 ---------- */
             <div className="mm">
               <div className="mm-root">{activeProject?.name ?? '프로젝트'}</div>
               <div className="mm-branches">
@@ -663,7 +861,6 @@ export default function Workspace({
               </div>
             </div>
           ) : (
-            /* ---------- 목록 뷰 ---------- */
             <div className="ws-cols">
               {categories.map((cat) => {
                 const items = todos.filter((t) => t.category_id === cat.id);
@@ -700,40 +897,7 @@ export default function Workspace({
                       </span>
                     </div>
                     <div className="ws-list">
-                      {items.map((t) =>
-                        editingId === t.id ? (
-                          <div key={t.id}>{editTodoForm()}</div>
-                        ) : (
-                          <div className="ws-item" key={t.id}>
-                            <label className="ws-item-main">
-                              <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
-                              <span className={`ws-check${t.completed ? ' done' : ''}`} />
-                              <span className="ws-text-wrap">
-                                <span className={`ws-text${t.completed ? ' done' : ''}`}>
-                                  {t.link ? (
-                                    <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer">
-                                      {t.title}
-                                    </a>
-                                  ) : (
-                                    t.title
-                                  )}
-                                  {t.assignee ? <span className="ws-assignee">{t.assignee}</span> : null}
-                                </span>
-                                {t.link ? <span className="ws-link">🔗 {t.link}</span> : null}
-                                {t.notes ? <span className="ws-note">{t.notes}</span> : null}
-                              </span>
-                            </label>
-                            <span className="ws-item-actions">
-                              <button className="ws-edit" onClick={() => openEdit(t)} title="편집">
-                                ✎
-                              </button>
-                              <button className="ws-x" onClick={() => deleteTodo(t)} title="할 일 삭제">
-                                ×
-                              </button>
-                            </span>
-                          </div>
-                        )
-                      )}
+                      {items.map((t) => renderTodo(t))}
                       {addTodoForm(cat.id)}
                     </div>
                   </div>

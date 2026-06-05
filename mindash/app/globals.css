@@ -432,6 +432,38 @@ ul { list-style: none; }
 .ws-addform-actions { display: flex; gap: 6px; }
 .ws-addproj { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .ws-addproj .ws-input { width: auto; min-width: 170px; }
+
+/* 난이도 선택/뱃지 */
+.ws-difflabel { font-size: 11px; font-weight: 600; color: var(--color-ash); margin-top: 2px; }
+.ws-diffsel { display: flex; gap: 5px; flex-wrap: wrap; }
+.ws-diffbtn {
+  font-size: 12px; font-weight: 600; color: var(--color-ash);
+  background: var(--color-warm-canvas); border: 1.5px solid var(--color-stone-surface);
+  border-radius: 16px; padding: 6px 10px; transition: all 0.15s ease;
+}
+.ws-diffbtn small { font-weight: 500; opacity: 0.8; }
+.ws-diffbtn.active { background: #fff; }
+.ws-diff {
+  display: inline-block; font-size: 10px; font-weight: 700; border: 1px solid; border-radius: 5px;
+  padding: 1px 5px; margin-right: 6px; vertical-align: middle; line-height: 1.5;
+}
+
+/* 체크리스트(서브 퀘스트) */
+.ws-item-wrap { display: flex; flex-direction: column; }
+.ws-sub-toggle { align-self: flex-start; font-size: 11px; font-weight: 600; color: var(--color-ash); padding: 2px 0; margin-top: 2px; }
+.ws-sub-toggle:hover { color: var(--color-ember-orange); }
+.ws-checklist { margin: 4px 0 6px 30px; padding-left: 12px; border-left: 2px dashed var(--color-stone-surface); display: flex; flex-direction: column; gap: 4px; }
+.ws-sub { display: flex; align-items: center; gap: 8px; }
+.ws-sub-main { display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; min-width: 0; }
+.ws-sub input { position: absolute; opacity: 0; width: 0; height: 0; }
+.ws-check-sm { width: 16px; height: 16px; border-radius: 5px; }
+.ws-check-sm.done::after { font-size: 10px; top: -2px; left: 2px; }
+.ws-sub-text { font-size: 13px; color: var(--color-graphite); }
+.ws-sub-text.done { color: var(--color-smoke); text-decoration: line-through; }
+.ws-sub-add { display: flex; gap: 6px; align-items: center; }
+.ws-sub-add .ws-input { font-size: 13px; padding: 7px 9px; }
+.ws-sub-addbtn { align-self: flex-start; font-size: 12px; font-weight: 500; color: var(--color-ash); padding: 3px 0; }
+.ws-sub-addbtn:hover { color: var(--color-ember-orange); }
 .ws-add-cat {
   font-size: 14px; font-weight: 600; color: var(--color-ash);
   width: 100%; padding: 16px; border-radius: var(--radius-cards);
