@@ -85,20 +85,29 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
 
   // 전체 XP/완료수 재계산 (RLS로 본인 소유만 집계)
   const refreshGlobalXp = useCallback(async () => {
-    const { data: doneTodos, error } = await supabase.from('todos').select('difficulty').eq('completed', true);
+    // 팀 프로젝트가 보여도 "내가 완료한 것"만 XP로 집계 (completed_by = 나)
+    const { data: doneTodos, error } = await supabase
+      .from('todos')
+      .select('difficulty')
+      .eq('completed', true)
+      .eq('completed_by', userId);
     if (error) {
-      // 마이그레이션 전(difficulty 컬럼 없음) 폴백: 개수 × 10
+      // 마이그레이션 전 폴백: 내 소유 프로젝트의 완료 개수 × 10
       const { count } = await supabase.from('todos').select('*', { count: 'exact', head: true }).eq('completed', true);
       setGDone(count ?? 0);
       setGXp((count ?? 0) * 10);
       return;
     }
     const base = (doneTodos ?? []).reduce((s, r) => s + xpForDifficulty(r.difficulty), 0);
-    const subRes = await supabase.from('subtasks').select('*', { count: 'exact', head: true }).eq('done', true);
+    const subRes = await supabase
+      .from('subtasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('done', true)
+      .eq('done_by', userId);
     const subDone = subRes.error ? 0 : subRes.count ?? 0;
     setGDone((doneTodos ?? []).length);
     setGXp(base + SUBTASK_XP * subDone);
-  }, [supabase]);
+  }, [supabase, userId]);
 
   useEffect(() => {
     refreshGlobalXp();
@@ -359,7 +368,11 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
 
     const { error } = await supabase
       .from('todos')
-      .update({ completed: next })
+      .update({
+        completed: next,
+        completed_by: next ? userId : null,
+        completed_at: next ? new Date().toISOString() : null,
+      })
       .eq('id', todo.id)
       .eq('category_id', todo.category_id);
     if (error) {
@@ -419,7 +432,10 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
       [st.todo_id]: (prev[st.todo_id] ?? []).map((x) => (x.id === st.id ? { ...x, done: next } : x)),
     }));
     setGXp((x) => Math.max(0, x + (next ? SUBTASK_XP : -SUBTASK_XP)));
-    const { error } = await supabase.from('subtasks').update({ done: next }).eq('id', st.id);
+    const { error } = await supabase
+      .from('subtasks')
+      .update({ done: next, done_by: next ? userId : null })
+      .eq('id', st.id);
     if (error) {
       setSubtasks((prev) => ({
         ...prev,

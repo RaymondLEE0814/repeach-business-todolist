@@ -19,6 +19,7 @@ type Row = {
   notes: string | null;
   difficulty: string | null;
   due_date: string | null;
+  completed_by: string | null;
 };
 type Toast = { key: number; icon: string; title: string; sub?: string };
 
@@ -33,7 +34,7 @@ const BUCKETS: { key: Bucket; label: string; color: string }[] = [
   { key: 'none', label: '날짜 없음', color: '#c6c6c6' },
 ];
 
-export default function TodayView({ projects }: { projects: Project[] }) {
+export default function TodayView({ projects, userId }: { projects: Project[]; userId: string }) {
   const supabase = createClient();
   const [items, setItems] = useState<Row[]>([]); // 미완료만
   const [loading, setLoading] = useState(true);
@@ -53,16 +54,21 @@ export default function TodayView({ projects }: { projects: Project[] }) {
     setLoading(true);
     let { data, error } = await supabase
       .from('todos')
-      .select('id,project_id,category_id,title,completed,link,notes,difficulty,due_date');
+      .select('id,project_id,category_id,title,completed,link,notes,difficulty,due_date,completed_by');
     if (error) {
       // 마이그레이션 전 폴백
       const fb = await supabase.from('todos').select('id,project_id,category_id,title,completed,link,notes');
-      data = (fb.data ?? []).map((r) => ({ ...(r as Row), difficulty: 'normal', due_date: null }));
+      data = (fb.data ?? []).map((r) => ({ ...(r as Row), difficulty: 'normal', due_date: null, completed_by: null }));
     }
     const rows = (data as Row[]) ?? [];
-    const completed = rows.filter((r) => r.completed);
+    // 내 XP는 "내가 완료한 것"만 (팀 프로젝트가 보여도 남의 완료 제외)
+    const completed = rows.filter((r) => r.completed && (r.completed_by ?? undefined) === userId);
     const base = completed.reduce((s, r) => s + xpForDifficulty(r.difficulty), 0);
-    const subRes = await supabase.from('subtasks').select('*', { count: 'exact', head: true }).eq('done', true);
+    const subRes = await supabase
+      .from('subtasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('done', true)
+      .eq('done_by', userId);
     const subDone = subRes.error ? 0 : subRes.count ?? 0;
     setGDone(completed.length);
     setGXp(base + SUBTASK_XP * subDone);
@@ -107,7 +113,11 @@ export default function TodayView({ projects }: { projects: Project[] }) {
       if (ach) setToast({ key: gDone + 1, icon: ach.icon, title: `업적 달성: ${ach.name}`, sub: ach.desc });
     }
 
-    const { error } = await supabase.from('todos').update({ completed: true }).eq('id', r.id).eq('category_id', r.category_id);
+    const { error } = await supabase
+      .from('todos')
+      .update({ completed: true, completed_by: userId, completed_at: new Date().toISOString() })
+      .eq('id', r.id)
+      .eq('category_id', r.category_id);
     if (error) {
       setItems(prev);
       setGXp(oldXp);

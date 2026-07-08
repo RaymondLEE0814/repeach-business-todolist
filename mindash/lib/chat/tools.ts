@@ -218,7 +218,11 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
             message: '여러 개가 매칭돼요. 더 구체적으로 알려주세요.',
           };
         const m = matches[0];
-        const { error: upErr } = await sb.from('todos').update({ completed: true }).eq('id', m.id).eq('category_id', m.category_id);
+        const { error: upErr } = await sb
+          .from('todos')
+          .update({ completed: true, completed_by: ctx.userId, completed_at: new Date().toISOString() })
+          .eq('id', m.id)
+          .eq('category_id', m.category_id);
         if (upErr) return { ok: false, error: upErr.message };
         ctx.changed.v = true;
         ctx.log(`complete_todo "${m.title}"`);

@@ -21,7 +21,7 @@ export default function DashboardShell({ initialProjects, userId }: { initialPro
       {mode === 'workspace' ? (
         <Workspace initialProjects={initialProjects} userId={userId} />
       ) : (
-        <TodayView projects={initialProjects} />
+        <TodayView projects={initialProjects} userId={userId} />
       )}
     </>
   );
