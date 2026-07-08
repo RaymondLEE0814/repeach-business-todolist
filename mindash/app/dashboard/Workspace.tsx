@@ -561,7 +561,7 @@ export default function Workspace({
           value={tTitle}
           onChange={(e) => setTTitle(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') submitTodo();
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) submitTodo();
             if (e.key === 'Escape') setAddingCat(null);
           }}
         />
@@ -582,7 +582,7 @@ export default function Workspace({
           value={tLink}
           onChange={(e) => setTLink(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') submitTodo();
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) submitTodo();
             if (e.key === 'Escape') setAddingCat(null);
           }}
         />
@@ -619,7 +619,7 @@ export default function Workspace({
         value={eTitle}
         onChange={(e) => setETitle(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') saveEdit();
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) saveEdit();
           if (e.key === 'Escape') setEditingId(null);
         }}
       />
@@ -640,7 +640,7 @@ export default function Workspace({
         value={eLink}
         onChange={(e) => setELink(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') saveEdit();
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) saveEdit();
           if (e.key === 'Escape') setEditingId(null);
         }}
       />
@@ -690,7 +690,7 @@ export default function Workspace({
               value={sTitle}
               onChange={(e) => setSTitle(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') submitSubtask(t.id);
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) submitSubtask(t.id);
                 if (e.key === 'Escape') setAddingSubFor(null);
               }}
             />
@@ -784,16 +784,24 @@ export default function Workspace({
       <input
         className="ws-input"
         autoFocus
-        placeholder={parentId ? '하위 할 일 (Enter 연속 추가)' : '할 일 (Enter 연속 추가)'}
+        placeholder={parentId ? '하위 할 일 (Enter로 추가)' : '할 일 (Enter로 추가)'}
         value={mindAddTitle}
         onChange={(e) => setMindAddTitle(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') submitMindTodo();
+          if (e.key === 'Enter') {
+            // 한글 IME 조합 중 Enter 무시 (마지막 음절 확정용)
+            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+            e.preventDefault();
+            submitMindTodo();
+          }
           if (e.key === 'Escape') setMindAdd(null);
         }}
       />
+      <button className="btn btn-dark btn-sm" onClick={submitMindTodo}>
+        추가
+      </button>
       <button className="btn btn-light btn-sm" onClick={() => setMindAdd(null)}>
-        완료
+        닫기
       </button>
     </div>
   );
@@ -912,7 +920,7 @@ export default function Workspace({
               value={projName}
               onChange={(e) => setProjName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') submitProject();
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) submitProject();
               }}
             />
             <button className="btn btn-dark btn-sm" onClick={submitProject}>
@@ -937,7 +945,7 @@ export default function Workspace({
                   value={projName}
                   onChange={(e) => setProjName(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') submitProject();
+                    if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) submitProject();
                     if (e.key === 'Escape') setAddingProject(false);
                   }}
                 />
@@ -1075,7 +1083,7 @@ export default function Workspace({
                           value={eCatName}
                           onChange={(e) => setECatName(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') saveEditCat();
+                            if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) saveEditCat();
                             if (e.key === 'Escape') setEditingCatId(null);
                           }}
                         />
@@ -1116,7 +1124,7 @@ export default function Workspace({
                       value={catName}
                       onChange={(e) => setCatName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') submitCategory();
+                        if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) submitCategory();
                         if (e.key === 'Escape') setAddingCategory(false);
                       }}
                     />
