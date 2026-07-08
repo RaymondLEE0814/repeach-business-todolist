@@ -40,7 +40,17 @@ const diffOf = (d?: string | null): Difficulty => ((d as Difficulty) in DIFFICUL
 const CAT_COLORS = ['#ff3e00', '#0090ff', '#00ca48', '#ffbb26', '#9f4fff', '#ff58ae', '#0086fc', '#00c978'];
 const catColor = (i: number) => CAT_COLORS[i % CAT_COLORS.length];
 
-export default function Workspace({ initialProjects, userId }: { initialProjects: Project[]; userId: string }) {
+export default function Workspace({
+  initialProjects,
+  userId,
+  teamId = null,
+  canManage = true,
+}: {
+  initialProjects: Project[];
+  userId: string;
+  teamId?: string | null;
+  canManage?: boolean;
+}) {
   const supabase = createClient();
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [activeId, setActiveId] = useState<string | null>(initialProjects[0]?.id ?? null);
@@ -175,7 +185,7 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
     const name = projName.trim();
     if (!name) return;
     const id = uid();
-    const { error } = await supabase.from('projects').insert({ id, name, owner_id: userId });
+    const { error } = await supabase.from('projects').insert({ id, name, owner_id: userId, team_id: teamId });
     if (error) return alert('프로젝트 생성 실패: ' + error.message);
     setProjects((p) => [...p, { id, name }]);
     setActiveId(id);
@@ -789,7 +799,7 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
                 <div className="ws-bar-fill" style={{ width: `${pct}%` }} />
               </div>
             </div>
-            {activeProject && (
+            {activeProject && canManage && (
               <button className="ws-del-project" onClick={() => deleteProject(activeProject)} title="프로젝트 삭제">
                 프로젝트 삭제
               </button>
@@ -904,9 +914,11 @@ export default function Workspace({ initialProjects, userId }: { initialProjects
                         <button className="ws-edit" onClick={() => openEditCat(cat)} title="이름 변경">
                           ✎
                         </button>
-                        <button className="ws-x" onClick={() => deleteCategory(cat)} title="카테고리 삭제">
-                          ×
-                        </button>
+                        {canManage && (
+                          <button className="ws-x" onClick={() => deleteCategory(cat)} title="카테고리 삭제">
+                            ×
+                          </button>
+                        )}
                       </span>
                     </div>
                     <div className="ws-list">

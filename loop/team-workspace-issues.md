@@ -31,4 +31,9 @@
 8. 초대 만료 7일 유지?
 
 ## 결정 로그
-- (대기) 위 열린 질문 사용자 확정 후 P1 착수.
+- 2026-06-10 열린질문 확정: member 생성O/삭제X · 이메일 지정 초대 · 개인 XP만(리더보드 추후).
+- 2026-06-10 P1 완료: migration_teams.sql 실행 성공(무한재귀 없음) + 클라 XP 귀속 수정 배포.
+- 2026-06-10 **공유 DB 충돌 검증 완료**: 같은 Supabase에 lev_* 프로젝트 공존.
+  - lev_* 테이블 전부 정상, 제 변경은 Mindash 테이블만 영향(RLS는 테이블별).
+  - auth.users 트리거 2개 공존 확인: `on_auth_user_created`(handle_new_user, Mindash) + `on_auth_user_created_lev`(lev_handle_new_user, lev) → **충돌 없음**.
+  - 향후 규칙: 새 객체는 접두사 컨벤션 권장(현재 teams/team_members/team_invites는 lev와 이름 안 겹쳐 안전).

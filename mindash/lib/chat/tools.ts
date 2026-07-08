@@ -42,9 +42,9 @@ export type ToolCtx = {
   changed: { v: boolean };
 };
 
-type Proj = { id: string; name: string };
+type Proj = { id: string; name: string; team_id: string | null };
 async function getProjects(ctx: ToolCtx): Promise<Proj[]> {
-  const { data } = await ctx.supabase.from('projects').select('id,name').order('created_at');
+  const { data } = await ctx.supabase.from('projects').select('id,name,team_id').order('created_at');
   return (data as Proj[]) ?? [];
 }
 function findProject(projects: Proj[], name?: string | null): Proj | null {
@@ -157,16 +157,17 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
           const nm = String(args.project).trim();
           const { error } = await sb.from('projects').insert({ id, name: nm, owner_id: ctx.userId });
           if (error) return { ok: false, error: error.message };
-          proj = { id, name: nm };
+          proj = { id, name: nm, team_id: null };
           ctx.changed.v = true;
         }
-        if (!proj) proj = projects[0] ?? null;
+        // 명시 안 하면 개인 프로젝트 우선(팀 프로젝트에 실수로 추가 방지)
+        if (!proj) proj = projects.find((p) => !p.team_id) ?? projects[0] ?? null;
         if (!proj) {
           const id = uid();
           const nm = '내 할 일';
           const { error } = await sb.from('projects').insert({ id, name: nm, owner_id: ctx.userId });
           if (error) return { ok: false, error: error.message };
-          proj = { id, name: nm };
+          proj = { id, name: nm, team_id: null };
           ctx.changed.v = true;
         }
         const { data: cats } = await sb.from('categories').select('id,name,position').eq('project_id', proj.id).order('position');

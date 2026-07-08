@@ -507,6 +507,57 @@ ul { list-style: none; }
 .mm-leaf input { position: absolute; opacity: 0; width: 0; height: 0; }
 
 /* ============================================================
+   팀(그룹) 워크스페이스
+   ============================================================ */
+.ctx-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.ctx-tab {
+  font-size: 14px; font-weight: 600; color: var(--color-graphite);
+  background: #fff; box-shadow: var(--shadow-subtle); border-radius: var(--radius-buttons);
+  padding: 9px 18px; transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.ctx-tab:hover { background: var(--color-parchment-card); }
+.ctx-tab.active { background: var(--color-sky-blue); color: #fff; box-shadow: none; }
+.ctx-add { background: transparent; box-shadow: var(--color-fog) 0px 0px 0px 1px inset; color: var(--color-ash); }
+.ctx-add:hover { color: var(--color-sky-blue); background: #fff; }
+.ctx-add.active { background: var(--color-sky-blue); color: #fff; }
+.ctx-addteam { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ctx-addteam .ws-input { width: auto; min-width: 150px; }
+
+.team-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: linear-gradient(135deg, #e8f3ff, #fff); border-radius: var(--radius-cards); box-shadow: var(--shadow-subtle); padding: 14px 20px; margin-bottom: 18px; }
+.team-head-name { font-size: 17px; font-weight: 600; color: var(--color-charcoal-primary); }
+.team-head-role { font-size: 12px; font-weight: 700; color: var(--color-sky-blue); background: #e8f3ff; border-radius: 6px; padding: 2px 9px; }
+.team-head .btn { margin-left: auto; }
+.team-head .btn + .btn { margin-left: 0; }
+
+.team-panel { background: #fff; border-radius: var(--radius-cards-large); box-shadow: var(--shadow-subtle); padding: 24px; margin-bottom: 22px; }
+.team-section { margin-bottom: 22px; }
+.team-section:last-of-type { margin-bottom: 0; }
+.team-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.team-section-head h3 { font-size: 15px; font-weight: 600; color: var(--color-charcoal-primary); }
+.team-members { display: flex; flex-direction: column; gap: 8px; }
+.team-member { display: flex; align-items: center; gap: 11px; background: var(--color-parchment-card); border-radius: 10px; padding: 10px 14px; }
+.tm-avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; background: var(--color-sky-blue); }
+.tm-info { flex: 1; min-width: 0; }
+.tm-name { font-size: 14px; font-weight: 600; color: var(--color-charcoal-primary); }
+.tm-you { font-size: 10px; font-weight: 700; color: var(--color-ember-orange); background: #ffece6; border-radius: 5px; padding: 1px 6px; margin-left: 6px; }
+.tm-email { font-size: 12px; color: var(--color-ash); }
+.tm-badge { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 9px; }
+.tm-badge.role-leader { background: #fff1dd; color: var(--color-deep-amber); }
+.tm-badge.role-admin { background: #e8f3ff; color: var(--color-sky-blue); }
+.tm-badge.role-member { background: var(--color-stone-surface); color: var(--color-ash); }
+.tm-role { width: auto; font-size: 12px; padding: 5px 8px; }
+.team-invite-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.team-invite-form .input { flex: 1; min-width: 180px; }
+.team-invites { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+.team-invite { display: flex; align-items: center; gap: 9px; background: var(--color-warm-canvas); border-radius: 9px; padding: 9px 13px; }
+.ti-email { flex: 1; font-size: 13px; color: var(--color-charcoal-primary); word-break: break-all; }
+.team-danger { border-top: 1px solid var(--color-stone-surface); padding-top: 16px; margin-top: 4px; }
+.team-danger .btn:hover { color: var(--color-coral-red); }
+
+.invite-banner { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: #fff1dd; border-radius: var(--radius-cards); padding: 14px 20px; margin-top: 18px; font-size: 14px; font-weight: 500; color: var(--color-deep-amber); }
+.invite-banner .btn { margin-left: auto; }
+
+/* ============================================================
    대시보드 모드 전환 + 오늘/이번 주 실행 화면
    ============================================================ */
 .dash-modetabs { display: inline-flex; gap: 4px; background: var(--color-stone-surface); border-radius: var(--radius-buttons); padding: 5px; margin-bottom: 24px; }

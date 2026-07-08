@@ -16,10 +16,12 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('id,name')
-    .order('created_at');
+  const [{ data: projects }, { data: teams }, { data: memberships }, { data: myInvites }] = await Promise.all([
+    supabase.from('projects').select('id,name,team_id').order('created_at'),
+    supabase.from('teams').select('id,name').order('created_at'),
+    supabase.from('team_members').select('team_id,role').eq('user_id', user.id),
+    supabase.from('team_invites').select('token').eq('status', 'pending').eq('email', (user.email ?? '').toLowerCase()),
+  ]);
 
   const displayName =
     (user.user_metadata?.full_name as string | undefined) ||
@@ -53,8 +55,23 @@ export default async function DashboardPage() {
           내 업무 공간입니다. 프로젝트를 전환하며 할 일을 확인하고 체크하세요.
         </p>
 
+        {myInvites && myInvites.length > 0 && (
+          <div className="invite-banner">
+            <span>✉️ 받은 팀 초대가 {myInvites.length}건 있어요.</span>
+            <Link href={`/invite/${myInvites[0].token}`} className="btn btn-dark btn-sm">
+              확인하기
+            </Link>
+          </div>
+        )}
+
         <div style={{ marginTop: 28 }}>
-          <DashboardShell initialProjects={projects ?? []} userId={user.id} />
+          <DashboardShell
+            initialProjects={projects ?? []}
+            initialTeams={teams ?? []}
+            memberships={memberships ?? []}
+            userId={user.id}
+            userEmail={user.email ?? ''}
+          />
         </div>
       </main>
 
