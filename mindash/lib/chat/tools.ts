@@ -86,6 +86,7 @@ export const TOOL_DECLARATIONS: FunctionDeclaration[] = [
         category: { type: Type.STRING, description: '카테고리 이름(선택)' },
         due_date: { type: Type.STRING, description: '계획일 YYYY-MM-DD 또는 오늘/내일/모레' },
         difficulty: { type: Type.STRING, enum: ['easy', 'normal', 'hard', 'delayed'], description: '난이도(선택)' },
+        parent: { type: Type.STRING, description: '상위 할 일 제목(선택) — 이 할 일을 그 하위로 추가' },
       },
       required: ['title'],
     },
@@ -183,13 +184,26 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
           if (error) return { ok: false, error: error.message };
           cat = { id, name: nm };
         }
+        // 상위 할 일(parent) 지정 시: 제목 부분일치로 찾아 그 밑에 중첩 + 카테고리 상속
+        let parentId: string | null = null;
+        if (args.parent) {
+          const pq = String(args.parent).trim().toLowerCase();
+          const { data: cand } = await sb.from('todos').select('id,category_id,title').eq('project_id', proj.id);
+          const matches = ((cand as { id: string; category_id: string; title: string }[]) ?? []).filter((r) =>
+            r.title.toLowerCase().includes(pq)
+          );
+          if (matches.length === 1) {
+            parentId = matches[0].id;
+            cat = { id: matches[0].category_id, name: cat.name }; // 부모의 카테고리 상속
+          }
+        }
         const { count } = await sb.from('todos').select('*', { count: 'exact', head: true }).eq('project_id', proj.id);
         const due = resolveDate(args.due_date as string);
         const diff = normDiff(args.difficulty as string);
         const id = uid();
         const { error } = await sb.from('todos').insert({
           project_id: proj.id, id, category_id: cat.id, title, completed: false,
-          notes: '', assignee: '', progress: '0', link: '', difficulty: diff, due_date: due, position: count ?? 0,
+          notes: '', assignee: '', progress: '0', link: '', difficulty: diff, due_date: due, parent_id: parentId, position: count ?? 0,
         });
         if (error) return { ok: false, error: error.message };
         ctx.changed.v = true;

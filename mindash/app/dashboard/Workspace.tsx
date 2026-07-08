@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { buildTree, subtreeStats, collectSubtreeIds, type Node } from './tree';
 import {
   levelInfo,
   newlyUnlocked,
@@ -29,6 +30,8 @@ type Todo = {
   notes: string | null;
   difficulty: string | null;
   due_date: string | null;
+  parent_id: string | null;
+  position: number | null;
 };
 type Subtask = { id: string; todo_id: string; title: string; done: boolean };
 type Toast = { key: number; icon: string; title: string; sub?: string };
@@ -75,6 +78,9 @@ export default function Workspace({
   const [projName, setProjName] = useState('');
   const [addingSubFor, setAddingSubFor] = useState<string | null>(null);
   const [sTitle, setSTitle] = useState('');
+  // 마인드맵 노드 추가(카테고리 최상위 또는 특정 노드 하위)
+  const [mindAdd, setMindAdd] = useState<{ catId: string; parentId: string | null } | null>(null);
+  const [mindAddTitle, setMindAddTitle] = useState('');
 
   // 편집 폼 상태
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -136,20 +142,28 @@ export default function Workspace({
         supabase.from('categories').select('id,name').eq('project_id', projectId).order('position'),
         supabase
           .from('todos')
-          .select('id,category_id,title,completed,assignee,progress,link,notes,difficulty,due_date')
+          .select('id,category_id,title,completed,assignee,progress,link,notes,difficulty,due_date,parent_id,position')
           .eq('project_id', projectId)
           .order('position'),
         supabase.from('subtasks').select('id,todo_id,title,done').eq('project_id', projectId).order('position'),
       ]);
       let tds = todoR.data as Todo[] | null;
       if (todoR.error) {
-        // 마이그레이션 전(difficulty/due_date 컬럼 없음) 폴백
+        // 마이그레이션 전(parent_id 등 없음) 폴백
         const fb = await supabase
           .from('todos')
-          .select('id,category_id,title,completed,assignee,progress,link,notes')
+          .select('id,category_id,title,completed,assignee,progress,link,notes,difficulty,due_date')
           .eq('project_id', projectId)
           .order('position');
-        tds = (fb.data ?? []).map((r) => ({ ...(r as Todo), difficulty: 'normal', due_date: null }));
+        tds = (fb.data ?? []).map((r) => ({ ...(r as Todo), parent_id: null, position: 0 }));
+        if (fb.error) {
+          const fb2 = await supabase
+            .from('todos')
+            .select('id,category_id,title,completed,assignee,progress,link,notes')
+            .eq('project_id', projectId)
+            .order('position');
+          tds = (fb2.data ?? []).map((r) => ({ ...(r as Todo), difficulty: 'normal', due_date: null, parent_id: null, position: 0 }));
+        }
       }
       setCategories((catR.data as Category[]) ?? []);
       setTodos(tds ?? []);
@@ -282,6 +296,7 @@ export default function Workspace({
       link,
       difficulty: tDiff,
       due_date: tDue || null,
+      parent_id: null,
       position: todos.length,
     });
     if (error) return alert('할 일 생성 실패: ' + error.message);
@@ -298,6 +313,8 @@ export default function Workspace({
         notes,
         difficulty: tDiff,
         due_date: tDue || null,
+        parent_id: null,
+        position: todos.length,
       },
     ]);
     setAddingCat(null);
@@ -306,6 +323,51 @@ export default function Workspace({
     setTNotes('');
     setTDiff('normal');
     setTDue('');
+  };
+
+  // 마인드맵에서 노드 추가 (카테고리 최상위: parentId=null / 특정 노드 하위: parentId=노드id)
+  const submitMindTodo = async () => {
+    if (!activeId || !mindAdd) return;
+    const title = mindAddTitle.trim();
+    if (!title) return;
+    const id = uid();
+    const { catId, parentId } = mindAdd;
+    const { error } = await supabase.from('todos').insert({
+      project_id: activeId,
+      id,
+      category_id: catId,
+      title,
+      completed: false,
+      notes: '',
+      assignee: '',
+      progress: '0',
+      link: '',
+      difficulty: 'normal',
+      due_date: null,
+      parent_id: parentId,
+      position: todos.length,
+    });
+    if (error) return alert('추가 실패: ' + error.message);
+    setTodos((t) => [
+      ...t,
+      {
+        id,
+        category_id: catId,
+        title,
+        completed: false,
+        assignee: '',
+        progress: '0',
+        link: '',
+        notes: '',
+        difficulty: 'normal',
+        due_date: null,
+        parent_id: parentId,
+        position: todos.length,
+      },
+    ]);
+    if (parentId) setExpanded((e) => ({ ...e, [parentId]: true }));
+    setMindAddTitle('');
+    // 연속 추가를 위해 폼 유지 (닫기는 취소/Esc)
   };
 
   const openEdit = (t: Todo) => {
@@ -346,13 +408,18 @@ export default function Workspace({
   };
 
   const deleteTodo = async (todo: Todo) => {
-    setTodos((prev) => prev.filter((t) => t.id !== todo.id));
+    // 서브트리(자손 포함) id 수집
+    const node = tree.byId.get(todo.id);
+    const ids = node ? collectSubtreeIds(node) : [todo.id];
+    if (ids.length > 1 && !window.confirm(`하위 할 일 ${ids.length - 1}개도 함께 삭제됩니다. 계속할까요?`)) return;
+    const idSet = new Set(ids);
+    setTodos((prev) => prev.filter((t) => !idSet.has(t.id)));
     setSubtasks((prev) => {
       const next = { ...prev };
-      delete next[todo.id];
+      ids.forEach((id) => delete next[id]);
       return next;
     });
-    await supabase.from('subtasks').delete().eq('todo_id', todo.id);
+    // 루트 1건 삭제 → DB FK CASCADE가 자손 todos + 그 subtasks까지 연쇄 삭제
     const { error } = await supabase.from('todos').delete().eq('id', todo.id).eq('category_id', todo.category_id);
     if (error) {
       alert('삭제 실패: ' + error.message);
@@ -465,6 +532,7 @@ export default function Workspace({
   const done = todos.filter((t) => t.completed).length;
   const pct = total ? Math.round((done / total) * 100) : 0;
   const activeProject = projects.find((p) => p.id === activeId) ?? null;
+  const tree = useMemo(() => buildTree(todos), [todos]);
 
   // 난이도 선택 UI
   const diffSelector = (value: Difficulty, onChange: (d: Difficulty) => void) => (
@@ -645,57 +713,171 @@ export default function Workspace({
     );
   };
 
-  // 할 일 한 줄 (목록 뷰)
-  const renderTodo = (t: Todo) => {
+  // 마인드맵 노드(재귀) — 무한 depth
+  const MAX_UI_DEPTH = 5;
+  const renderMindNode = (node: Node<Todo>, color: string): ReactNode => {
+    const hasChildren = node.children.length > 0;
+    const open = !!expanded[node.id];
+    const stats = hasChildren ? subtreeStats(node) : null;
+    return (
+      <div className="mm-item" key={node.id}>
+        <div className="mm-leaf">
+          {hasChildren ? (
+            <button className="mm-caret-sm" onClick={() => setExpanded((e) => ({ ...e, [node.id]: !e[node.id] }))}>
+              {open ? '▾' : '▸'}
+            </button>
+          ) : (
+            <span className="mm-caret-sm empty" />
+          )}
+          <label className="mm-leaf-main">
+            <input type="checkbox" checked={node.completed} onChange={() => toggle(node)} />
+            <span className={`ws-check${node.completed ? ' done' : ''}`} />
+            <span className="ws-text-wrap">
+              <span className={`ws-text${node.completed ? ' done' : ''}`}>
+                {node.link ? (
+                  <a href={normalizeUrl(node.link)} target="_blank" rel="noreferrer">
+                    {node.title}
+                  </a>
+                ) : (
+                  node.title
+                )}
+                {stats && (
+                  <span className="mm-substat">
+                    {stats.done - (node.completed ? 1 : 0)}/{stats.total - 1}
+                  </span>
+                )}
+              </span>
+              {node.notes ? <span className="ws-note">{node.notes}</span> : null}
+            </span>
+          </label>
+          <span className="mm-node-actions">
+            {node.depth < MAX_UI_DEPTH - 1 && (
+              <button
+                className="mm-addchild"
+                onClick={() => {
+                  setMindAdd({ catId: node.category_id, parentId: node.id });
+                  setMindAddTitle('');
+                  setExpanded((e) => ({ ...e, [node.id]: true }));
+                }}
+                title="하위 할 일 추가"
+              >
+                + 하위
+              </button>
+            )}
+            <button className="ws-x" onClick={() => deleteTodo(node)} title="삭제">
+              ×
+            </button>
+          </span>
+        </div>
+        {(open || mindAdd?.parentId === node.id) && (
+          <div className="mm-leaves" style={{ borderLeftColor: color }}>
+            {node.children.map((c) => renderMindNode(c, color))}
+            {mindAdd?.parentId === node.id && renderMindAddForm(node.category_id, node.id)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderMindAddForm = (catId: string, parentId: string | null) => (
+    <div className="mm-addform" key={`add-${parentId ?? catId}`}>
+      <input
+        className="ws-input"
+        autoFocus
+        placeholder={parentId ? '하위 할 일 (Enter 연속 추가)' : '할 일 (Enter 연속 추가)'}
+        value={mindAddTitle}
+        onChange={(e) => setMindAddTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') submitMindTodo();
+          if (e.key === 'Escape') setMindAdd(null);
+        }}
+      />
+      <button className="btn btn-light btn-sm" onClick={() => setMindAdd(null)}>
+        완료
+      </button>
+    </div>
+  );
+
+  // 할 일 한 줄 (목록 뷰, 재귀)
+  const renderTodo = (t: Node<Todo>, depth = 0): ReactNode => {
     const subs = subtasks[t.id] ?? [];
     const subDone = subs.filter((s) => s.done).length;
     const d = diffOf(t.difficulty);
     const open = !!openChecklist[t.id];
     if (editingId === t.id) return <div key={t.id}>{editTodoForm()}</div>;
+    const childForm = mindAdd?.parentId === t.id;
+    const cs = t.children.length ? subtreeStats(t) : null;
     return (
-      <div className="ws-item-wrap" key={t.id}>
-        <div className="ws-item">
-          <label className="ws-item-main">
-            <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
-            <span className={`ws-check${t.completed ? ' done' : ''}`} />
-            <span className="ws-text-wrap">
-              <span className={`ws-text${t.completed ? ' done' : ''}`}>
-                {d !== 'normal' && (
-                  <span className="ws-diff" style={{ color: DIFFICULTY[d].color, borderColor: DIFFICULTY[d].color }}>
-                    {DIFFICULTY[d].label}
+      <div className="ws-tree-node" key={t.id}>
+        {editingId === t.id ? (
+          editTodoForm()
+        ) : (
+          <div className="ws-item-wrap">
+            <div className="ws-item">
+              <label className="ws-item-main">
+                <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
+                <span className={`ws-check${t.completed ? ' done' : ''}`} />
+                <span className="ws-text-wrap">
+                  <span className={`ws-text${t.completed ? ' done' : ''}`}>
+                    {depth > 0 && <span className="ws-childmark">↳</span>}
+                    {d !== 'normal' && (
+                      <span className="ws-diff" style={{ color: DIFFICULTY[d].color, borderColor: DIFFICULTY[d].color }}>
+                        {DIFFICULTY[d].label}
+                      </span>
+                    )}
+                    {t.link ? (
+                      <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer">
+                        {t.title}
+                      </a>
+                    ) : (
+                      t.title
+                    )}
+                    {cs && (
+                      <span className="mm-substat">
+                        {cs.done - (t.completed ? 1 : 0)}/{cs.total - 1}
+                      </span>
+                    )}
+                    {t.due_date && !t.completed && (
+                      <span className={`ws-due ws-due-${bucketOf(t.due_date)}`}>📅 {dueLabel(t.due_date)}</span>
+                    )}
                   </span>
+                  {t.link ? <span className="ws-link">🔗 {t.link}</span> : null}
+                  {t.notes ? <span className="ws-note">{t.notes}</span> : null}
+                  <button className="ws-sub-toggle" onClick={() => setOpenChecklist((o) => ({ ...o, [t.id]: !o[t.id] }))}>
+                    {subs.length > 0 ? `☑ 체크리스트 ${subDone}/${subs.length}` : '＋ 체크리스트'} {open ? '▾' : '▸'}
+                  </button>
+                </span>
+              </label>
+              <span className="ws-item-actions">
+                <button className="ws-edit" onClick={() => openEdit(t)} title="편집">
+                  ✎
+                </button>
+                {depth < MAX_UI_DEPTH - 1 && (
+                  <button
+                    className="mm-addchild"
+                    onClick={() => {
+                      setMindAdd({ catId: t.category_id, parentId: t.id });
+                      setMindAddTitle('');
+                    }}
+                    title="하위 할 일 추가"
+                  >
+                    + 하위
+                  </button>
                 )}
-                {t.link ? (
-                  <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer">
-                    {t.title}
-                  </a>
-                ) : (
-                  t.title
-                )}
-                {t.due_date && !t.completed && (
-                  <span className={`ws-due ws-due-${bucketOf(t.due_date)}`}>📅 {dueLabel(t.due_date)}</span>
-                )}
+                <button className="ws-x" onClick={() => deleteTodo(t)} title="할 일 삭제">
+                  ×
+                </button>
               </span>
-              {t.link ? <span className="ws-link">🔗 {t.link}</span> : null}
-              {t.notes ? <span className="ws-note">{t.notes}</span> : null}
-              <button
-                className="ws-sub-toggle"
-                onClick={() => setOpenChecklist((o) => ({ ...o, [t.id]: !o[t.id] }))}
-              >
-                {subs.length > 0 ? `☑ 체크리스트 ${subDone}/${subs.length}` : '＋ 체크리스트'} {open ? '▾' : '▸'}
-              </button>
-            </span>
-          </label>
-          <span className="ws-item-actions">
-            <button className="ws-edit" onClick={() => openEdit(t)} title="편집">
-              ✎
-            </button>
-            <button className="ws-x" onClick={() => deleteTodo(t)} title="할 일 삭제">
-              ×
-            </button>
-          </span>
-        </div>
-        {open && checklistPanel(t)}
+            </div>
+            {open && checklistPanel(t)}
+          </div>
+        )}
+        {(t.children.length > 0 || childForm) && (
+          <div className="ws-children">
+            {t.children.map((c) => renderTodo(c, depth + 1))}
+            {childForm && renderMindAddForm(t.category_id, t.id)}
+          </div>
+        )}
       </div>
     );
   };
@@ -851,26 +1033,21 @@ export default function Workspace({
                         </span>
                       </button>
                       {open && (
-                        <div className="mm-leaves">
-                          {items.map((t) => (
-                            <label className="mm-leaf" key={t.id}>
-                              <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
-                              <span className={`ws-check${t.completed ? ' done' : ''}`} />
-                              <span className="ws-text-wrap">
-                                <span className={`ws-text${t.completed ? ' done' : ''}`}>
-                                  {t.link ? (
-                                    <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer">
-                                      {t.title}
-                                    </a>
-                                  ) : (
-                                    t.title
-                                  )}
-                                </span>
-                                {t.notes ? <span className="ws-note">{t.notes}</span> : null}
-                              </span>
-                            </label>
-                          ))}
-                          {items.length === 0 && <p className="ws-empty">할 일 없음</p>}
+                        <div className="mm-leaves" style={{ borderLeftColor: catColor(i) }}>
+                          {(tree.rootsByCategory.get(cat.id) ?? []).map((n) => renderMindNode(n, catColor(i)))}
+                          {mindAdd?.catId === cat.id && mindAdd.parentId === null ? (
+                            renderMindAddForm(cat.id, null)
+                          ) : (
+                            <button
+                              className="mm-add-root"
+                              onClick={() => {
+                                setMindAdd({ catId: cat.id, parentId: null });
+                                setMindAddTitle('');
+                              }}
+                            >
+                              + 할 일
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -922,7 +1099,7 @@ export default function Workspace({
                       </span>
                     </div>
                     <div className="ws-list">
-                      {items.map((t) => renderTodo(t))}
+                      {(tree.rootsByCategory.get(cat.id) ?? []).map((n) => renderTodo(n))}
                       {addTodoForm(cat.id)}
                     </div>
                   </div>
