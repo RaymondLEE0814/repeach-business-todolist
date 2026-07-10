@@ -930,6 +930,7 @@ export default function Workspace({
         </div>
       ) : (
         <div className="ws">
+          <div className="ws-toprow">
           <div className="ws-tabs">
             {projects.map((p) => (
               <button key={p.id} className={`ws-tab${p.id === activeId ? ' active' : ''}`} onClick={() => setActiveId(p.id)}>
@@ -968,6 +969,15 @@ export default function Workspace({
               </button>
             )}
           </div>
+          <div className="ws-viewtoggle">
+            <button className={`ws-vbtn${view === 'list' ? ' active' : ''}`} onClick={() => setView('list')}>
+              ▦ 목록 뷰
+            </button>
+            <button className={`ws-vbtn${view === 'mindmap' ? ' active' : ''}`} onClick={() => setView('mindmap')}>
+              ⌗ 마인드맵 뷰
+            </button>
+          </div>
+          </div>
 
           <div className="ws-stats">
             <div className="ws-chip">
@@ -994,15 +1004,6 @@ export default function Workspace({
                 프로젝트 삭제
               </button>
             )}
-          </div>
-
-          <div className="ws-viewtoggle">
-            <button className={`ws-vbtn${view === 'list' ? ' active' : ''}`} onClick={() => setView('list')}>
-              ▦ 목록 뷰
-            </button>
-            <button className={`ws-vbtn${view === 'mindmap' ? ' active' : ''}`} onClick={() => setView('mindmap')}>
-              ⌗ 마인드맵 뷰
-            </button>
           </div>
 
           {loading ? (

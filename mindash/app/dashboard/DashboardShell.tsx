@@ -66,7 +66,8 @@ export default function DashboardShell({
 
   return (
     <>
-      {/* 컨텍스트 스위처: 내 워크스페이스 / 팀들 / + 팀 */}
+      {/* 상단 바: 컨텍스트(개인/팀) 좌 + 모드(워크스페이스/오늘) 우 */}
+      <div className="dash-toprow">
       <div className="ctx-tabs">
         <button
           className={`ctx-tab${context === 'personal' ? ' active' : ''}`}
@@ -75,7 +76,7 @@ export default function DashboardShell({
             setShowPanel(false);
           }}
         >
-          🏠 내 워크스페이스
+          🏠 개인
         </button>
         {teams.map((t) => (
           <button
@@ -121,6 +122,15 @@ export default function DashboardShell({
           </button>
         )}
       </div>
+        <div className="dash-modetabs">
+          <button className={`dash-modebtn${mode === 'workspace' ? ' active' : ''}`} onClick={() => setMode('workspace')}>
+            🗂 워크스페이스
+          </button>
+          <button className={`dash-modebtn${mode === 'today' ? ' active' : ''}`} onClick={() => setMode('today')}>
+            ☀️ 오늘 · 이번 주
+          </button>
+        </div>
+      </div>
 
       {/* 팀 헤더 + 관리/진행상황 */}
       {teamId && currentTeam && (
@@ -158,16 +168,6 @@ export default function DashboardShell({
           }}
         />
       )}
-
-      {/* 모드 토글 */}
-      <div className="dash-modetabs">
-        <button className={`dash-modebtn${mode === 'workspace' ? ' active' : ''}`} onClick={() => setMode('workspace')}>
-          🗂 워크스페이스
-        </button>
-        <button className={`dash-modebtn${mode === 'today' ? ' active' : ''}`} onClick={() => setMode('today')}>
-          ☀️ 오늘 · 이번 주
-        </button>
-      </div>
 
       {mode === 'workspace' ? (
         <Workspace key={context} initialProjects={visibleProjects} userId={userId} teamId={teamId} canManage={canManage} />

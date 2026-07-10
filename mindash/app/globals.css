@@ -532,6 +532,14 @@ ul { list-style: none; }
 /* ============================================================
    팀(그룹) 워크스페이스
    ============================================================ */
+/* 상단 바: 좌측 탭 + 우측 토글 한 줄 */
+.dash-toprow { display: flex; align-items: center; justify-content: space-between; gap: 16px 20px; flex-wrap: wrap; margin-bottom: 20px; }
+.dash-toprow .ctx-tabs { margin-bottom: 0; }
+.dash-toprow .dash-modetabs { margin-bottom: 0; flex-shrink: 0; }
+.ws-toprow { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin-bottom: 22px; }
+.ws-toprow .ws-tabs { margin-bottom: 0; }
+.ws-toprow .ws-viewtoggle { margin-bottom: 0; flex-shrink: 0; }
+
 .ctx-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
 .ctx-tab {
   font-size: 14px; font-weight: 600; color: var(--color-graphite);
