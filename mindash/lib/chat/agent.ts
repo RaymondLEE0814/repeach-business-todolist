@@ -47,5 +47,11 @@ export async function runChatAgent(opts: {
     contents.push({ role: 'user', parts: respParts });
   }
 
-  return { reply: finalText.trim() || '처리했어요.', changed: opts.ctx.changed.v, steps };
+  let reply = finalText.trim() || '처리했어요.';
+  // 환각 가드: 실제 DB 변경이 없었는데 "했다/등록했다"고 주장하면 경고 부기
+  const CLAIM = /(추가|등록|생성|완료|만들)(했|됐|되었|완료)/;
+  if (!opts.ctx.changed.v && CLAIM.test(reply)) {
+    reply += '\n\n⚠️ 실제로는 변경이 확인되지 않았어요. 화면을 확인하시고 다시 요청해 주세요.';
+  }
+  return { reply, changed: opts.ctx.changed.v, steps };
 }

@@ -785,6 +785,7 @@ ul { list-style: none; }
 @keyframes cs-in { from { transform: translateY(16px) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
 .cs-chat-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: #fff; box-shadow: var(--shadow-nav); }
 .cs-title { font-weight: 600; font-size: 15px; color: var(--color-charcoal-primary); }
+.cs-ctx { font-size: 11px; font-weight: 700; color: var(--color-sky-blue); background: #e8f3ff; border-radius: 8px; padding: 3px 9px; margin-left: auto; margin-right: 8px; white-space: nowrap; }
 .cs-close { font-size: 22px; color: var(--color-ash); line-height: 1; padding: 0 4px; }
 .cs-close:hover { color: var(--color-coral-red); }
 .cs-chat-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }

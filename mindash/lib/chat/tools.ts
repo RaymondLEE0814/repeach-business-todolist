@@ -38,6 +38,7 @@ const uid = () => (globalThis.crypto?.randomUUID?.() ?? 'id-' + Math.random().to
 export type ToolCtx = {
   supabase: SupabaseClient;
   userId: string;
+  currentTeamId: string | null; // null = 개인 컨텍스트
   log: (s: string) => void;
   changed: { v: boolean };
 };
@@ -47,14 +48,17 @@ async function getProjects(ctx: ToolCtx): Promise<Proj[]> {
   const { data } = await ctx.supabase.from('projects').select('id,name,team_id').order('created_at');
   return (data as Proj[]) ?? [];
 }
-function findProject(projects: Proj[], name?: string | null): Proj | null {
+// 현재 컨텍스트(팀이면 그 팀, 개인이면 team_id 없는) 프로젝트인지
+const inContext = (ctx: ToolCtx) => (p: Proj) => (ctx.currentTeamId ? p.team_id === ctx.currentTeamId : !p.team_id);
+
+function findProject(projects: Proj[], name: string | null | undefined, ctx?: ToolCtx): Proj | null {
   if (!name) return null;
   const t = String(name).trim().toLowerCase();
-  return (
-    projects.find((p) => p.name.toLowerCase() === t) ??
-    projects.find((p) => p.name.toLowerCase().includes(t)) ??
-    null
-  );
+  const match = (list: Proj[]) =>
+    list.find((p) => p.name.toLowerCase() === t) ?? list.find((p) => p.name.toLowerCase().includes(t)) ?? null;
+  // ① 현재 컨텍스트 내에서 먼저, ② 없으면 전체(다른 공간을 이름으로 명시 지정한 경우)
+  if (ctx) return match(projects.filter(inContext(ctx))) ?? match(projects);
+  return match(projects);
 }
 
 export const TOOL_DECLARATIONS: FunctionDeclaration[] = [
@@ -105,8 +109,15 @@ export const TOOL_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: 'create_project',
-    description: '새 프로젝트(업무 공간)를 만든다.',
-    parameters: { type: Type.OBJECT, properties: { name: { type: Type.STRING } }, required: ['name'] },
+    description: '새 프로젝트를 만든다. 현재 컨텍스트(개인/팀)에 자동 생성된다.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        name: { type: Type.STRING },
+        personal: { type: Type.BOOLEAN, description: '팀 스페이스를 보고 있어도 개인 공간에 만들려면 true' },
+      },
+      required: ['name'],
+    },
   },
   {
     name: 'create_category',
@@ -133,7 +144,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
         const projects = await getProjects(ctx);
         const pmap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
         let q = sb.from('todos').select('id,title,completed,due_date,project_id,difficulty');
-        const proj = findProject(projects, args.project as string);
+        const proj = findProject(projects, args.project as string, ctx);
         if (proj) q = q.eq('project_id', proj.id);
         if (!includeCompleted) q = q.eq('completed', false);
         const { data, error } = await q;
@@ -152,23 +163,23 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
         const title = String(args.title ?? '').trim();
         if (!title) return { ok: false, error: 'title 필요' };
         const projects = await getProjects(ctx);
-        let proj = findProject(projects, args.project as string);
+        let proj = findProject(projects, args.project as string, ctx);
         if (!proj && args.project) {
           const id = uid();
           const nm = String(args.project).trim();
-          const { error } = await sb.from('projects').insert({ id, name: nm, owner_id: ctx.userId });
+          const { error } = await sb.from('projects').insert({ id, name: nm, owner_id: ctx.userId, team_id: ctx.currentTeamId });
           if (error) return { ok: false, error: error.message };
-          proj = { id, name: nm, team_id: null };
+          proj = { id, name: nm, team_id: ctx.currentTeamId };
           ctx.changed.v = true;
         }
-        // 명시 안 하면 개인 프로젝트 우선(팀 프로젝트에 실수로 추가 방지)
-        if (!proj) proj = projects.find((p) => !p.team_id) ?? projects[0] ?? null;
+        // 명시 안 하면 현재 컨텍스트(팀/개인)의 프로젝트 우선
+        if (!proj) proj = projects.find(inContext(ctx)) ?? null;
         if (!proj) {
           const id = uid();
-          const nm = '내 할 일';
-          const { error } = await sb.from('projects').insert({ id, name: nm, owner_id: ctx.userId });
+          const nm = ctx.currentTeamId ? '팀 할 일' : '내 할 일';
+          const { error } = await sb.from('projects').insert({ id, name: nm, owner_id: ctx.userId, team_id: ctx.currentTeamId });
           if (error) return { ok: false, error: error.message };
-          proj = { id, name: nm, team_id: null };
+          proj = { id, name: nm, team_id: ctx.currentTeamId };
           ctx.changed.v = true;
         }
         const { data: cats } = await sb.from('categories').select('id,name,position').eq('project_id', proj.id).order('position');
@@ -216,7 +227,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
         const projects = await getProjects(ctx);
         const pmap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
         let q = sb.from('todos').select('id,title,project_id,category_id').eq('completed', false);
-        const proj = findProject(projects, args.project as string);
+        const proj = findProject(projects, args.project as string, ctx);
         if (proj) q = q.eq('project_id', proj.id);
         const { data, error } = await q;
         if (error) return { ok: false, error: error.message };
@@ -246,15 +257,16 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
       case 'create_project': {
         const name = String(args.name ?? '').trim();
         if (!name) return { ok: false, error: 'name 필요' };
+        const teamId = args.personal ? null : ctx.currentTeamId; // 팀 컨텍스트면 팀에, personal=true면 개인에
         const id = uid();
-        const { error } = await sb.from('projects').insert({ id, name, owner_id: ctx.userId });
+        const { error } = await sb.from('projects').insert({ id, name, owner_id: ctx.userId, team_id: teamId });
         if (error) return { ok: false, error: error.message };
         ctx.changed.v = true;
-        return { ok: true, project: name };
+        return { ok: true, project: name, space: teamId ? '팀' : '개인' };
       }
       case 'create_category': {
         const projects = await getProjects(ctx);
-        const proj = findProject(projects, args.project as string) ?? projects[0];
+        const proj = findProject(projects, args.project as string, ctx) ?? projects.find(inContext(ctx));
         if (!proj) return { ok: false, error: '프로젝트가 없어요. 먼저 프로젝트를 만들어 주세요.' };
         const name = String(args.name ?? '').trim();
         if (!name) return { ok: false, error: 'name 필요' };

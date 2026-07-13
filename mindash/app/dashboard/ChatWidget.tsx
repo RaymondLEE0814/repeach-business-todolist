@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { getChatContext } from './chatContext';
 
 type Msg = { role: 'user' | 'assistant' | 'system' | 'error'; text: string };
 
@@ -8,10 +9,17 @@ const HINT = '자연어로 일정을 관리해보세요. 예: "내일 제안서 
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
+  const [ctxLabel, setCtxLabel] = useState<string>('개인');
   const [msgs, setMsgs] = useState<Msg[]>([{ role: 'system', text: HINT }]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  const toggleOpen = () =>
+    setOpen((o) => {
+      if (!o) setCtxLabel(getChatContext().teamName ? `👥 ${getChatContext().teamName}` : '🏠 개인');
+      return !o;
+    });
 
   const scroll = () =>
     setTimeout(() => bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' }), 0);
@@ -27,11 +35,13 @@ export default function ChatWidget() {
     setBusy(true);
     setMsgs((m) => [...m, { role: 'user', text: message }]);
     scroll();
+    const cc = getChatContext();
+    setCtxLabel(cc.teamName ? `👥 ${cc.teamName}` : '🏠 개인');
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, history }),
+        body: JSON.stringify({ message, history, teamId: cc.teamId }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -58,13 +68,14 @@ export default function ChatWidget() {
 
   return (
     <>
-      <button className="cs-fab" onClick={() => setOpen((o) => !o)} aria-label="일정 비서" title="일정 비서">
+      <button className="cs-fab" onClick={toggleOpen} aria-label="일정 비서" title="일정 비서">
         {open ? '×' : '✦'}
       </button>
       {open && (
         <div className="cs-chat">
           <div className="cs-chat-head">
             <span className="cs-title">✦ 일정 비서</span>
+            <span className="cs-ctx" title="지금 이 공간에 추가/생성됩니다">{ctxLabel}</span>
             <button className="cs-close" onClick={() => setOpen(false)} aria-label="닫기">
               ×
             </button>

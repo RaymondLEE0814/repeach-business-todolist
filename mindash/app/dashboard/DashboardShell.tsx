@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Workspace from './Workspace';
 import TodayView from './TodayView';
 import TeamPanel from './TeamPanel';
+import { setChatContext } from './chatContext';
 
 type Project = { id: string; name: string; team_id: string | null };
 type Team = { id: string; name: string };
@@ -49,6 +50,12 @@ export default function DashboardShell({
   );
 
   const currentTeam = teams.find((t) => t.id === teamId) ?? null;
+
+  // 챗봇이 읽을 현재 컨텍스트 동기화
+  useEffect(() => {
+    setChatContext({ teamId, teamName: currentTeam?.name ?? null });
+    return () => setChatContext({ teamId: null, teamName: null });
+  }, [teamId, currentTeam?.name]);
 
   const createTeam = async () => {
     const name = teamName.trim();
