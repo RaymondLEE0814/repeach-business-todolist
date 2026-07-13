@@ -1,8 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  pointerWithin,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
 import { createClient } from '@/lib/supabase/client';
 import { buildTree, subtreeStats, collectSubtreeIds, type Node } from './tree';
+import { DraggableTodo, DroppableColumn } from './dnd';
 import {
   levelInfo,
   newlyUnlocked,
@@ -534,6 +546,65 @@ export default function Workspace({
   const activeProject = projects.find((p) => p.id === activeId) ?? null;
   const tree = useMemo(() => buildTree(todos), [todos]);
 
+  // ---------- 드래그앤드롭(카테고리 간 이동) ----------
+  const [dragId, setDragId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
+  );
+  const dragNode = dragId ? tree.byId.get(dragId) ?? null : null;
+
+  const moveTodoToCategory = async (node: Node<Todo>, targetCatId: string) => {
+    if (!activeId) return;
+    if (node.category_id === targetCatId && node.parent_id === null) return; // 제자리
+    const ids = collectSubtreeIds(node);
+    const descIds = ids.filter((i) => i !== node.id);
+    const idSet = new Set(ids);
+    const prev = todos;
+    const newPos = todos.length;
+    // 낙관적: 이동 노드는 새 카테고리+최상위, 자손은 카테고리만
+    setTodos((p) =>
+      p.map((t) =>
+        !idSet.has(t.id)
+          ? t
+          : t.id === node.id
+          ? { ...t, category_id: targetCatId, parent_id: null, position: newPos }
+          : { ...t, category_id: targetCatId }
+      )
+    );
+    // ① 루트 먼저 (실패 시 안전 롤백)
+    const r1 = await supabase
+      .from('todos')
+      .update({ category_id: targetCatId, parent_id: null, position: newPos })
+      .eq('project_id', activeId)
+      .eq('id', node.id);
+    if (r1.error) {
+      setTodos(prev);
+      alert('이동 실패: ' + r1.error.message);
+      return;
+    }
+    // ② 자손 카테고리 일괄
+    if (descIds.length) {
+      const r2 = await supabase.from('todos').update({ category_id: targetCatId }).eq('project_id', activeId).in('id', descIds);
+      if (r2.error) load(activeId);
+    }
+  };
+
+  const onDragStart = (e: DragStartEvent) => {
+    setDragId(String(e.active.id));
+    setEditingId(null);
+    setAddingCat(null);
+    setMindAdd(null);
+  };
+  const onDragEnd = (e: DragEndEvent) => {
+    setDragId(null);
+    const overId = e.over?.id ? String(e.over.id) : null;
+    if (!overId || !overId.startsWith('cat:')) return;
+    const targetCatId = overId.slice(4);
+    const node = tree.byId.get(String(e.active.id));
+    if (node) moveTodoToCategory(node, targetCatId);
+  };
+
   // 난이도 선택 UI
   const diffSelector = (value: Difficulty, onChange: (d: Difficulty) => void) => (
     <div className="ws-diffsel">
@@ -820,10 +891,15 @@ export default function Workspace({
         {editingId === t.id ? (
           editTodoForm()
         ) : (
-          <div className="ws-item-wrap">
-            <div className="ws-item">
-              <label className="ws-item-main">
-                <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
+          <DraggableTodo id={t.id} disabled={editingId === t.id}>
+            {(handle) => (
+              <div className="ws-item-wrap">
+                <div className="ws-item">
+                  <span className="ws-drag" {...handle} title="드래그하여 이동">
+                    ⠿
+                  </span>
+                  <label className="ws-item-main">
+                    <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
                 <span className={`ws-check${t.completed ? ' done' : ''}`} />
                 <span className="ws-text-wrap">
                   <span className={`ws-text${t.completed ? ' done' : ''}`}>
@@ -877,8 +953,10 @@ export default function Workspace({
                 </button>
               </span>
             </div>
-            {open && checklistPanel(t)}
-          </div>
+                {open && checklistPanel(t)}
+              </div>
+            )}
+          </DraggableTodo>
         )}
         {(t.children.length > 0 || childForm) && (
           <div className="ws-children">
@@ -1070,6 +1148,13 @@ export default function Workspace({
               </div>
             </div>
           ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={pointerWithin}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onDragCancel={() => setDragId(null)}
+            >
             <div className="ws-cols">
               {categories.map((cat) => {
                 const items = todos.filter((t) => t.category_id === cat.id);
@@ -1107,10 +1192,10 @@ export default function Workspace({
                         )}
                       </span>
                     </div>
-                    <div className="ws-list">
+                    <DroppableColumn id={`cat:${cat.id}`}>
                       {(tree.rootsByCategory.get(cat.id) ?? []).map((n) => renderTodo(n))}
                       {addTodoForm(cat.id)}
-                    </div>
+                    </DroppableColumn>
                   </div>
                 );
               })}
@@ -1151,6 +1236,17 @@ export default function Workspace({
                 )}
               </div>
             </div>
+            <DragOverlay dropAnimation={null}>
+              {dragNode ? (
+                <div className="ws-drag-overlay">
+                  ⠿ {dragNode.title}
+                  {dragNode.children.length > 0 && (
+                    <span className="mm-substat">하위 {collectSubtreeIds(dragNode).length - 1}</span>
+                  )}
+                </div>
+              ) : null}
+            </DragOverlay>
+            </DndContext>
           )}
         </div>
       )}

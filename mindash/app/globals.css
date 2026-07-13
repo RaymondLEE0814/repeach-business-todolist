@@ -529,6 +529,17 @@ ul { list-style: none; }
 .ws-children { margin-left: 16px; padding-left: 12px; border-left: 2px dashed var(--color-stone-surface); display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .ws-childmark { color: var(--color-fog); margin-right: 4px; font-weight: 700; }
 
+/* ---------- 드래그앤드롭 ---------- */
+.ws-drag { flex-shrink: 0; cursor: grab; color: var(--color-fog); font-size: 15px; line-height: 1; padding: 2px 2px 0; user-select: none; touch-action: none; opacity: 0; transition: opacity 0.15s ease, color 0.15s ease; }
+.ws-item:hover .ws-drag { opacity: 1; }
+.ws-drag:hover { color: var(--color-ash); }
+.ws-drag:active { cursor: grabbing; }
+.ws-dragging { opacity: 0.4; }
+.ws-list.ws-drop-over { outline: 2px dashed var(--color-ember-orange); outline-offset: 2px; border-radius: 10px; background: #fff7f2; }
+.ws-drag-overlay { display: inline-flex; align-items: center; gap: 8px; background: #fff; box-shadow: rgba(0,0,0,0.18) 0px 8px 24px; border-radius: 10px; padding: 11px 15px; font-size: 14px; font-weight: 500; color: var(--color-charcoal-primary); cursor: grabbing; }
+/* 목록 컬럼이 빈 상태에서도 드롭 가능하도록 최소 높이 */
+.ws-list { min-height: 44px; }
+
 /* ============================================================
    팀(그룹) 워크스페이스
    ============================================================ */
