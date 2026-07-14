@@ -671,6 +671,16 @@ ul { list-style: none; }
 .lvl-xpbar { height: 12px; border-radius: 7px; background: var(--color-stone-surface); overflow: hidden; margin-bottom: 20px; }
 .lvl-xpfill { height: 100%; border-radius: 7px; background: linear-gradient(90deg, var(--color-sunburst-yellow), var(--color-ember-orange)); }
 .lvl-section { font-size: 13px; font-weight: 700; color: var(--color-ash); margin: 4px 0 10px; letter-spacing: 0.02em; }
+.tier-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 20px; }
+.tier-chip { display: flex; flex-direction: column; align-items: center; gap: 3px; background: #fff; border-radius: 10px; padding: 9px 4px; box-shadow: var(--shadow-subtle); }
+.tier-chip.locked { opacity: 0.45; }
+.tier-chip.passed { opacity: 0.7; }
+.tier-chip.current { box-shadow: var(--color-ember-orange) 0px 0px 0px 2px inset; }
+.tier-chip-icon { font-size: 19px; }
+.tier-chip-name { font-size: 10.5px; font-weight: 600; color: var(--color-graphite); text-align: center; line-height: 1.15; }
+.tier-chip.current .tier-chip-name { color: var(--color-ember-orange); }
+.lvl-milestone { font-size: 13px; color: var(--color-graphite); text-align: center; margin: -8px 0 20px; }
+.lvl-milestone b { color: var(--color-charcoal-primary); }
 .lvl-ladder { display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px; }
 .lvl-row { display: flex; align-items: center; gap: 11px; background: #fff; border-radius: 10px; padding: 10px 14px; box-shadow: var(--shadow-subtle); }
 .lvl-row.locked { opacity: 0.5; }

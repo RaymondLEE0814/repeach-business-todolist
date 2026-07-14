@@ -1,12 +1,30 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { levelInfo, countAchievementsUnlocked, LEVELS, COUNT_ACHIEVEMENTS } from '@/lib/gamification';
+import {
+  levelInfo,
+  countAchievementsUnlocked,
+  COUNT_ACHIEVEMENTS,
+  TIERS,
+  LEVELS_PER_TIER,
+  cumXpForLevel,
+  titleFor,
+  tierForLevel,
+} from '@/lib/gamification';
 
 export default function GameBar({ gXp, gDone }: { gXp: number; gDone: number }) {
   const gi = levelInfo(gXp);
   const unlocked = countAchievementsUnlocked(gDone);
   const [open, setOpen] = useState(false);
+
+  const curTier = tierForLevel(gi.level);
+  const isTop = curTier.tier === TIERS.length;
+  // 현재 티어의 5레벨 (초월 무한 구간이면 현재 ±2 윈도우)
+  const detailLevels =
+    isTop && gi.level > curTier.startLevel + LEVELS_PER_TIER - 1
+      ? [gi.level - 2, gi.level - 1, gi.level, gi.level + 1, gi.level + 2].filter((l) => l >= 1)
+      : Array.from({ length: LEVELS_PER_TIER }, (_, i) => curTier.startLevel + i);
+  const nextTier = TIERS.find((t) => t.tier === gi.tier + 1) ?? null;
 
   // XP 증가 시 "+N XP" 팝업 + 펄스
   const prev = useRef(gXp);
@@ -75,17 +93,31 @@ export default function GameBar({ gXp, gDone }: { gXp: number; gDone: number }) 
               <div className="lvl-xpfill" style={{ width: `${gi.pct}%` }} />
             </div>
 
-            <h4 className="lvl-section">레벨</h4>
-            <div className="lvl-ladder">
-              {LEVELS.map((l) => {
-                const status = gi.level > l.level ? 'done' : gi.level === l.level ? 'current' : 'locked';
+            <h4 className="lvl-section">등급 (전체 10등급 · 각 5단계)</h4>
+            <div className="tier-strip">
+              {TIERS.map((t) => {
+                const st = gi.tier > t.tier ? 'passed' : gi.tier === t.tier ? 'current' : 'locked';
                 return (
-                  <div className={`lvl-row ${status}`} key={l.level}>
-                    <span className="lvl-row-icon">{l.icon}</span>
+                  <div className={`tier-chip ${st}`} key={t.tier} title={`${t.name} · Lv.${t.startLevel}~`}>
+                    <span className="tier-chip-icon">{t.icon}</span>
+                    <span className="tier-chip-name">{t.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <h4 className="lvl-section">{curTier.name} 등급 단계</h4>
+            <div className="lvl-ladder">
+              {detailLevels.map((l) => {
+                const status = gi.level > l ? 'done' : gi.level === l ? 'current' : 'locked';
+                const { title } = titleFor(l);
+                return (
+                  <div className={`lvl-row ${status}`} key={l}>
+                    <span className="lvl-row-icon">{tierForLevel(l).icon}</span>
                     <span className="lvl-row-name">
-                      Lv.{l.level} {l.title}
+                      Lv.{l} {title}
                     </span>
-                    <span className="lvl-row-xp">{l.minXp} XP~</span>
+                    <span className="lvl-row-xp">{cumXpForLevel(l)} XP~</span>
                     <span className="lvl-row-badge">
                       {status === 'done' ? '달성 ✓' : status === 'current' ? '현재' : '잠김'}
                     </span>
@@ -93,6 +125,11 @@ export default function GameBar({ gXp, gDone }: { gXp: number; gDone: number }) 
                 );
               })}
             </div>
+            {nextTier && (
+              <p className="lvl-milestone">
+                다음 등급 <b>{nextTier.icon} {nextTier.name}</b>까지 {Math.max(0, cumXpForLevel(nextTier.startLevel) - gi.xp)} XP
+              </p>
+            )}
 
             <h4 className="lvl-section">업적</h4>
             <div className="lvl-achs">
