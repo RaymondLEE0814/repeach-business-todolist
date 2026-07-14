@@ -27,14 +27,23 @@ export async function signIn(
   }
 
   revalidatePath('/', 'layout');
-  // 미승인 사용자는 대기 페이지로 (관리자 승인 전)
+  // 미승인 사용자는 대기 페이지로 (관리자 승인 전).
+  // Mindash에 처음 로그인하는 (다른 사이트 전용) 계정은 여기서 pending 멤버로 편입.
   if (data.user) {
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('status')
-      .eq('id', data.user.id)
-      .maybeSingle();
-    if (prof && prof.status !== 'approved') redirect('/pending');
+    let status: string | null = null;
+    const { data: ens } = await supabase.rpc('mindash_ensure_member');
+    if (ens && typeof ens === 'object' && 'status' in ens) {
+      status = (ens as { status?: string }).status ?? null;
+    }
+    if (status === null) {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('id', data.user.id)
+        .maybeSingle();
+      status = prof?.status ?? null;
+    }
+    if (status && status !== 'approved') redirect('/pending');
   }
   redirect(redirectTo.startsWith('/') ? redirectTo : '/dashboard');
 }
@@ -62,7 +71,8 @@ export async function signUp(
     email,
     password,
     options: {
-      data: { full_name: name || null },
+      // 'app' 마커로 이 가입이 Mindash 소속임을 표시 → 트리거가 이 경우만 profiles 생성
+      data: { full_name: name || null, app: 'mindash' },
       emailRedirectTo: `${origin}/auth/confirm`,
     },
   });

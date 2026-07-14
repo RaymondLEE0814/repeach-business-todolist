@@ -58,7 +58,8 @@ export async function updateSession(request: NextRequest) {
       .select('status')
       .eq('id', user.id)
       .maybeSingle();
-    const approved = prof ? prof.status === 'approved' : true; // 행 없음/조회오류 → 통과(방어)
+    // 앱 스코핑 후: profiles 행 없음 = 비-Mindash 멤버 → 미승인 취급(/pending에서 편입)
+    const approved = prof ? prof.status === 'approved' : false;
 
     if (isAdmin) {
       const { data: adm } = await supabase
@@ -89,14 +90,14 @@ export async function updateSession(request: NextRequest) {
     return redirectTo(prof && prof.status !== 'approved' ? '/pending' : '/dashboard');
   }
 
-  // 승인된 사용자가 /pending 접근 시 대시보드로
+  // 승인된 사용자가 /pending 접근 시 대시보드로. (행 없음 = 비멤버 → /pending에 머물며 편입)
   if (user && path === '/pending') {
     const { data: prof } = await supabase
       .from('profiles')
       .select('status')
       .eq('id', user.id)
       .maybeSingle();
-    if (!prof || prof.status === 'approved') return redirectTo('/dashboard');
+    if (prof && prof.status === 'approved') return redirectTo('/dashboard');
   }
 
   return supabaseResponse;

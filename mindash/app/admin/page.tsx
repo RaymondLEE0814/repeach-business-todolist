@@ -13,6 +13,7 @@ export default async function AdminPage() {
     supabase
       .from('profiles')
       .select('id,email,full_name,status,created_at,approved_at')
+      .eq('mindash_member', true) // Mindash 사용자만 (다른 사이트 가입자 제외)
       .order('created_at', { ascending: false }),
     supabase.from('mindash_admins').select('user_id'),
   ]);

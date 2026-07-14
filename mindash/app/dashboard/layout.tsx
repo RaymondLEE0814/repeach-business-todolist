@@ -20,7 +20,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (!adm && prof && prof.status !== 'approved') redirect('/pending');
+  // 행 없음 = 비-Mindash 멤버 → /pending (거기서 편입). 관리자는 통과.
+  if (!adm && (!prof || prof.status !== 'approved')) redirect('/pending');
 
   return <>{children}</>;
 }

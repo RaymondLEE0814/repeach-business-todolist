@@ -9,6 +9,9 @@ export default async function PendingPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
+  // 행이 없으면(다른 사이트 전용 계정이 Mindash에 처음 접근) pending 멤버로 편입
+  await supabase.rpc('mindash_ensure_member');
+
   const { data: prof } = await supabase
     .from('profiles')
     .select('status')
@@ -21,9 +24,9 @@ export default async function PendingPage() {
     .maybeSingle();
 
   // 이미 승인(또는 관리자)이면 대시보드로
-  if (adm || !prof || prof.status === 'approved') redirect('/dashboard');
+  if (adm || (prof && prof.status === 'approved')) redirect('/dashboard');
 
-  const rejected = prof.status === 'rejected';
+  const rejected = prof?.status === 'rejected';
 
   return (
     <main className="pending-wrap">
