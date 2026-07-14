@@ -54,6 +54,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
   }
 
+  // 승인 게이트: 미승인 사용자는 챗봇(및 DB 변경) 사용 불가
+  const { data: prof } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', user.id)
+    .maybeSingle();
+  const { data: adm } = await supabase
+    .from('mindash_admins')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (!adm && prof && prof.status !== 'approved') {
+    return NextResponse.json(
+      { error: '관리자 승인 대기 중입니다. 승인 후 이용할 수 있어요.' },
+      { status: 403 }
+    );
+  }
+
   const body = await req.json().catch(() => ({}));
   const message = String(body?.message ?? '').trim();
   if (!message) return NextResponse.json({ error: 'message가 비었습니다.' }, { status: 400 });

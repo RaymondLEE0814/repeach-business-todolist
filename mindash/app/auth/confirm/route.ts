@@ -13,6 +13,20 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
     if (!error) {
+      // 승인 여부에 따라 대기 페이지/대시보드로 분기
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('status')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (prof && prof.status !== 'approved') {
+          return NextResponse.redirect(`${origin}/pending`);
+        }
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

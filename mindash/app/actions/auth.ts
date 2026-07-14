@@ -20,13 +20,22 @@ export async function signIn(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     return { error: '이메일 또는 비밀번호가 올바르지 않습니다.' };
   }
 
   revalidatePath('/', 'layout');
+  // 미승인 사용자는 대기 페이지로 (관리자 승인 전)
+  if (data.user) {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('status')
+      .eq('id', data.user.id)
+      .maybeSingle();
+    if (prof && prof.status !== 'approved') redirect('/pending');
+  }
   redirect(redirectTo.startsWith('/') ? redirectTo : '/dashboard');
 }
 
@@ -65,15 +74,15 @@ export async function signUp(
     return { error: '회원가입에 실패했습니다. 잠시 후 다시 시도해 주세요.' };
   }
 
-  // 이메일 확인이 꺼져 있으면 곧바로 세션이 생성됨 → 대시보드로
+  // 이메일 확인이 꺼져 있으면 곧바로 세션이 생성됨 → 승인 대기 페이지로
   if (data.session) {
     revalidatePath('/', 'layout');
-    redirect('/dashboard');
+    redirect('/pending');
   }
 
   return {
     notice:
-      '확인 이메일을 보냈습니다. 메일의 링크를 클릭해 가입을 완료한 뒤 로그인해 주세요.',
+      '확인 이메일을 보냈습니다. 메일의 링크를 클릭해 가입을 완료한 뒤 로그인해 주세요. (가입 후 관리자 승인이 필요합니다.)',
   };
 }
 

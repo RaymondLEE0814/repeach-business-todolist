@@ -32,23 +32,71 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 보호 라우트: 로그인 안 한 사용자가 /dashboard 접근 시 /login으로
-  if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
+  const path = request.nextUrl.pathname;
+  const isDash = path.startsWith('/dashboard');
+  const isAdmin = path.startsWith('/admin');
+  const isApi = path.startsWith('/api/');
+  const redirectTo = (pathname: string) => {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname;
+    url.search = '';
+    return NextResponse.redirect(url);
+  };
+
+  // 보호 라우트: 로그인 안 한 사용자가 /dashboard·/admin 접근 시 /login으로
+  if ((isDash || isAdmin) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('redirect', request.nextUrl.pathname);
+    url.searchParams.set('redirect', path);
     return NextResponse.redirect(url);
   }
 
-  // 로그인한 사용자가 로그인/회원가입 페이지 접근 시 대시보드로
-  if (
-    user &&
-    (request.nextUrl.pathname === '/login' ||
-      request.nextUrl.pathname === '/signup')
-  ) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
+  // 승인/관리자 게이트: DB 단건 조회(경로 한정). 조회 실패(마이그레이션 전 등)는 관대하게 통과.
+  if (user && (isDash || isAdmin || isApi)) {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('status')
+      .eq('id', user.id)
+      .maybeSingle();
+    const approved = prof ? prof.status === 'approved' : true; // 행 없음/조회오류 → 통과(방어)
+
+    if (isAdmin) {
+      const { data: adm } = await supabase
+        .from('mindash_admins')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!adm) return redirectTo('/dashboard'); // 관리자 아님
+      // 관리자는 자동 승인 취급 → 통과
+    } else if (!approved) {
+      if (isApi) {
+        return NextResponse.json(
+          { error: '관리자 승인 대기 중입니다. 승인 후 이용할 수 있어요.' },
+          { status: 403 }
+        );
+      }
+      return redirectTo('/pending');
+    }
+  }
+
+  // 로그인한 사용자가 로그인/회원가입 페이지 접근 시 → 승인 여부에 따라 분기
+  if (user && (path === '/login' || path === '/signup')) {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('status')
+      .eq('id', user.id)
+      .maybeSingle();
+    return redirectTo(prof && prof.status !== 'approved' ? '/pending' : '/dashboard');
+  }
+
+  // 승인된 사용자가 /pending 접근 시 대시보드로
+  if (user && path === '/pending') {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('status')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (!prof || prof.status === 'approved') return redirectTo('/dashboard');
   }
 
   return supabaseResponse;

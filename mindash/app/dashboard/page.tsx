@@ -16,12 +16,15 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const [{ data: projects }, { data: teams }, { data: memberships }, { data: myInvites }] = await Promise.all([
-    supabase.from('projects').select('id,name,team_id').order('created_at'),
-    supabase.from('teams').select('id,name').order('created_at'),
-    supabase.from('team_members').select('team_id,role').eq('user_id', user.id),
-    supabase.from('team_invites').select('token').eq('status', 'pending').eq('email', (user.email ?? '').toLowerCase()),
-  ]);
+  const [{ data: projects }, { data: teams }, { data: memberships }, { data: myInvites }, { data: adm }] =
+    await Promise.all([
+      supabase.from('projects').select('id,name,team_id').order('created_at'),
+      supabase.from('teams').select('id,name').order('created_at'),
+      supabase.from('team_members').select('team_id,role').eq('user_id', user.id),
+      supabase.from('team_invites').select('token').eq('status', 'pending').eq('email', (user.email ?? '').toLowerCase()),
+      supabase.from('mindash_admins').select('user_id').eq('user_id', user.id).maybeSingle(),
+    ]);
+  const isAdmin = !!adm;
 
   const displayName =
     (user.user_metadata?.full_name as string | undefined) ||
@@ -40,6 +43,11 @@ export default async function DashboardPage() {
             <span className="caption" style={{ marginRight: 6 }}>
               {user.email}
             </span>
+            {isAdmin && (
+              <Link href="/admin" className="btn btn-light btn-sm">
+                🛡️ 관리자
+              </Link>
+            )}
             <form action={signOut}>
               <button className="btn btn-light btn-sm" type="submit">
                 로그아웃

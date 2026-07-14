@@ -883,3 +883,67 @@ ul { list-style: none; }
   .blob { display: none; }
   .hero-decor { display: none; }
 }
+
+/* ============================================================
+   승인 대기 페이지 + 관리자 페이지
+   ============================================================ */
+.pending-wrap {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 20px; background: var(--color-warm-canvas);
+}
+.pending-card {
+  max-width: 460px; width: 100%; text-align: center;
+  background: var(--color-parchment-card);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), 0 10px 30px rgba(0,0,0,0.06);
+  border-radius: 24px; padding: 44px 36px;
+}
+.pending-illus { font-size: 56px; line-height: 1; margin-bottom: 18px; }
+.pending-title { font-size: 26px; font-weight: 700; color: var(--color-charcoal-primary); margin: 0 0 14px; }
+.pending-desc { color: var(--color-graphite); line-height: 1.7; margin: 0 0 28px; font-size: 15px; }
+
+.admin-users { }
+.admin-filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.admin-filter {
+  border: 1px solid rgba(0,0,0,0.12); background: #fff; color: var(--color-graphite);
+  padding: 7px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s;
+}
+.admin-filter:hover { border-color: var(--color-charcoal-primary); }
+.admin-filter.active { background: var(--color-charcoal-primary); color: #fff; border-color: var(--color-charcoal-primary); }
+
+.admin-msg { padding: 10px 16px; border-radius: 12px; font-size: 14px; margin-bottom: 14px; }
+.admin-msg.ok { background: rgba(0,202,72,0.12); color: #0a7c37; }
+.admin-msg.err { background: rgba(255,43,58,0.1); color: #c31625; }
+
+.admin-table-wrap { overflow-x: auto; border: 1px solid rgba(0,0,0,0.08); border-radius: 18px; background: #fff; }
+.admin-table { width: 100%; border-collapse: collapse; min-width: 640px; }
+.admin-table th {
+  text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 0.03em;
+  color: var(--color-ash); text-transform: uppercase;
+  padding: 14px 18px; border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+.admin-table td { padding: 14px 18px; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: middle; }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr.row-busy { opacity: 0.5; }
+
+.admin-user-cell { display: flex; flex-direction: column; gap: 2px; }
+.admin-user-name { font-weight: 600; color: var(--color-charcoal-primary); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.admin-user-email { font-size: 12px; color: var(--color-ash); }
+.admin-badge { font-size: 11px; font-weight: 700; color: var(--color-violet-pop); background: rgba(159,79,255,0.1); padding: 2px 8px; border-radius: 999px; }
+.admin-date { font-size: 13px; color: var(--color-graphite); white-space: nowrap; }
+
+.st-badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
+.st-badge.st-pending { background: rgba(255,187,38,0.18); color: #a06f00; }
+.st-badge.st-approved { background: rgba(0,202,72,0.14); color: #0a7c37; }
+.st-badge.st-rejected { background: rgba(255,43,58,0.12); color: #c31625; }
+
+.admin-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.admin-actions .admin-danger { color: #c31625; }
+.admin-empty { text-align: center; color: var(--color-ash); padding: 32px; }
+
+@media (max-width: 600px) {
+  .pending-card { padding: 32px 24px; }
+  .admin-table { min-width: 560px; }
+}
