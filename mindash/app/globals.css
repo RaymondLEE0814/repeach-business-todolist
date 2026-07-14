@@ -655,6 +655,40 @@ ul { list-style: none; }
 }
 .game-bar.pulse { box-shadow: var(--color-sunburst-yellow) 0px 0px 0px 2px inset, rgba(255,187,38,0.35) 0px 0px 26px; }
 .game-level { position: relative; display: flex; align-items: center; gap: 16px; min-width: 240px; }
+.game-level-btn { text-align: left; border-radius: 14px; padding: 4px; margin: -4px; transition: background-color 0.15s ease; }
+.game-level-btn:hover { background: rgba(0, 0, 0, 0.03); }
+.game-more { color: var(--color-ash); font-size: 12px; }
+
+/* 레벨·업적 모달 */
+.lvl-modal { position: fixed; inset: 0; z-index: 2200; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(18, 18, 18, 0.5); animation: lu-fade 0.2s ease; }
+.lvl-card { width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto; background: var(--color-warm-canvas); border-radius: 22px; box-shadow: var(--shadow-lg); padding: 24px; animation: cs-in 0.28s cubic-bezier(0.19, 1, 0.22, 1); }
+.lvl-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.lvl-head-icon { width: 52px; height: 52px; border-radius: 15px; background: #fff; box-shadow: var(--shadow-subtle); display: inline-flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+.lvl-head-title { font-family: var(--font-family); font-weight: 500; font-size: 22px; letter-spacing: -0.6px; color: var(--color-charcoal-primary); }
+.lvl-head-sub { font-size: 12.5px; color: var(--color-ash); margin-top: 2px; }
+.lvl-close { font-size: 24px; color: var(--color-ash); line-height: 1; padding: 0 4px; align-self: flex-start; }
+.lvl-close:hover { color: var(--color-coral-red); }
+.lvl-xpbar { height: 12px; border-radius: 7px; background: var(--color-stone-surface); overflow: hidden; margin-bottom: 20px; }
+.lvl-xpfill { height: 100%; border-radius: 7px; background: linear-gradient(90deg, var(--color-sunburst-yellow), var(--color-ember-orange)); }
+.lvl-section { font-size: 13px; font-weight: 700; color: var(--color-ash); margin: 4px 0 10px; letter-spacing: 0.02em; }
+.lvl-ladder { display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px; }
+.lvl-row { display: flex; align-items: center; gap: 11px; background: #fff; border-radius: 10px; padding: 10px 14px; box-shadow: var(--shadow-subtle); }
+.lvl-row.locked { opacity: 0.5; }
+.lvl-row.current { box-shadow: var(--color-ember-orange) 0px 0px 0px 2px inset; }
+.lvl-row-icon { font-size: 20px; width: 26px; text-align: center; }
+.lvl-row-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--color-charcoal-primary); }
+.lvl-row-xp { font-size: 12px; color: var(--color-ash); }
+.lvl-row-badge { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 9px; background: var(--color-stone-surface); color: var(--color-ash); min-width: 46px; text-align: center; }
+.lvl-row.done .lvl-row-badge { background: #e6f9ee; color: var(--color-meadow-green); }
+.lvl-row.current .lvl-row-badge { background: #ffece6; color: var(--color-ember-orange); }
+.lvl-achs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+.lvl-ach { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 10px; padding: 10px 12px; box-shadow: var(--shadow-subtle); }
+.lvl-ach.locked { opacity: 0.55; }
+.lvl-ach-icon { font-size: 20px; flex-shrink: 0; }
+.lvl-ach-name { font-size: 13px; font-weight: 600; color: var(--color-charcoal-primary); }
+.lvl-ach-desc { font-size: 11px; color: var(--color-ash); }
+.lvl-note { font-size: 11.5px; color: var(--color-ash); line-height: 1.5; background: var(--color-parchment-card); border-radius: 10px; padding: 11px 13px; }
+@media (max-width: 480px) { .lvl-achs { grid-template-columns: 1fr; } }
 .game-icon {
   width: 58px; height: 58px; border-radius: 17px; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center; font-size: 32px;
