@@ -206,7 +206,11 @@ ul { list-style: none; }
 }
 
 /* ---------- Product visual (mindmap → schedule) ---------- */
-.product { margin: 56px auto 0; max-width: 980px; background: var(--color-parchment-card); border-radius: var(--radius-cards-large); padding: 28px; box-shadow: var(--shadow-subtle); }
+.hero-video-wrap { margin: 48px auto 0; max-width: 980px; border-radius: var(--radius-cards-large); overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,0.12); background: var(--color-parchment-card); border: 1px solid rgba(0,0,0,0.05); }
+.hero-video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: var(--color-parchment-card); }
+@media (prefers-reduced-motion: reduce) { .hero-video { display: none; } }
+
+.product { margin: 40px auto 0; max-width: 980px; background: var(--color-parchment-card); border-radius: var(--radius-cards-large); padding: 28px; box-shadow: var(--shadow-subtle); }
 .product-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; }
 .panel { background: #fff; border-radius: 14px; box-shadow: var(--shadow-subtle); padding: 20px; }
 .panel-title { font-size: 13px; font-weight: 600; color: var(--color-ash); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
@@ -317,7 +321,10 @@ ul { list-style: none; }
 .footer a { font-size: 14px; color: var(--color-ash); }
 .footer a:hover { color: var(--color-ember-orange); }
 .footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
-.footer-copy { font-size: 12px; color: var(--color-fog); margin-top: 24px; }
+.footer-company { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--color-stone-surface); }
+.footer-company-name { font-size: 14px; font-weight: 600; color: var(--color-graphite); margin: 0 0 6px; }
+.footer-company-lines { font-size: 12px; line-height: 1.9; color: var(--color-ash); margin: 0; }
+.footer-copy { font-size: 12px; color: var(--color-fog); margin-top: 20px; }
 
 /* ============================================================
    Auth pages (login / signup)

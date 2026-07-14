@@ -79,6 +79,23 @@ export default function Home() {
           </div>
           <p className="hero-note">신용카드 없이 신청 · 베타 예상 요금제</p>
 
+          {/* 서비스 소개 영상 */}
+          <div className="hero-video-wrap">
+            <video
+              className="hero-video"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster="/videos/intro-poster.webp"
+              aria-label="서비스 소개 영상"
+            >
+              <source src="/videos/intro-video.webm" type="video/webm" />
+              <source src="/videos/intro-video.mp4" type="video/mp4" />
+            </video>
+          </div>
+
           {/* 제품 시각화: 마인드맵 → 일정 */}
           <div className="product">
             <div className="product-grid">
@@ -310,6 +327,18 @@ export default function Home() {
               <Link href="/signup">회원가입</Link>
             </div>
           </div>
+
+          <div className="footer-company">
+            <p className="footer-company-name">(주)슈퍼런</p>
+            <p className="footer-company-lines">
+              대표자 이석진 · 사업자등록번호 739-87-03673
+              <br />
+              주소 서울특별시 마포구 신촌로 114 에프디빌딩 2층 · 대표번호 02-6012-1223
+              <br />
+              통신판매업신고번호 제2017-서울서초-0120호 · 출판사신고확인번호 제2014-000082호 · 등록번호 제2025-10호
+            </p>
+          </div>
+
           <p className="footer-copy">© 2026 Mindash. All rights reserved.</p>
         </div>
       </footer>

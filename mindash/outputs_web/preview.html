@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>서비스 소개 영상 미리보기</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;display:grid;place-items:center;background:#171717;font-family:system-ui,sans-serif}
+    main{width:min(1200px,94vw)} video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:22px;background:#f7f5f1;box-shadow:0 30px 90px #0008}
+    p{color:#aaa;text-align:center;margin:16px 0 0;font-size:14px}
+  </style>
+</head>
+<body><main>
+  <video controls autoplay muted loop playsinline poster="intro-poster.webp">
+    <source src="intro-video.webm" type="video/webm">
+    <source src="intro-video.mp4" type="video/mp4">
+  </video>
+  <p>1920 × 1080 · 19.6초 · 무음 · 반복 재생</p>
+</main></body>
+</html>
