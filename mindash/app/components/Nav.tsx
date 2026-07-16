@@ -9,16 +9,16 @@ export default function Nav() {
           Mindash
         </Link>
         <div className="nav-links">
-          <a href="#problem">문제</a>
-          <a href="#flow">사용 흐름</a>
-          <a href="#features">기능</a>
-          <a href="#pricing">요금제</a>
+          <a href="/#problem">문제</a>
+          <a href="/#flow">사용 흐름</a>
+          <a href="/#features">기능</a>
+          <Link href="/pricing">요금제</Link>
         </div>
         <div className="nav-actions">
           <Link href="/login" className="btn btn-light btn-sm">
             로그인
           </Link>
-          <a href="#beta" className="btn btn-dark btn-sm">
+          <a href="/#beta" className="btn btn-dark btn-sm">
             무료 베타 신청
           </a>
         </div>

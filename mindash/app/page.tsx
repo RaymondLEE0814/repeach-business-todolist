@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import Nav from '@/app/components/Nav';
 import BetaForm from '@/app/components/BetaForm';
+import AdInquiryForm from '@/app/components/AdInquiryForm';
+import Footer from '@/app/components/Footer';
 import HeroDecor from '@/app/components/HeroDecor';
 
 const FEATURES = [
@@ -34,11 +36,28 @@ const USECASES = [
   { tag: '스터디 / 동아리', color: '#9f4fff', title: '행사 준비와 역할 분담 관리', desc: '행사·프로젝트를 단계로 나누고 역할을 배정해 빠짐없이 준비합니다.' },
 ];
 
-const PLANS = [
-  { name: 'Free', price: '0', target: '체험 / 개인 시작', value: '프로젝트 3개, 마인드맵 3개', featured: false },
-  { name: 'Personal Pro', price: '3,900', target: '개인', value: '무제한 프로젝트와 캘린더 연동', featured: true },
-  { name: 'Freelancer', price: '7,900', target: '1인 사업자', value: '고객별 프로젝트와 외부 공유', featured: false },
-  { name: 'Team Starter', price: '19,000', target: '2~5명 팀', value: '팀원 3명 포함, 담당자·댓글·팀 캘린더', featured: false },
+const ADS_POINTS = [
+  {
+    icon: '🎯',
+    bg: '#ffece6',
+    color: '#ff3e00',
+    title: '명확한 타깃',
+    desc: '개인 · 프리랜서 · 소규모 팀 · 스터디까지, 생산성 도구에 지갑을 여는 실사용자층에 닿습니다.',
+  },
+  {
+    icon: '☀️',
+    bg: '#fff6e0',
+    color: '#d48f00',
+    title: '매일 열어보는 화면',
+    desc: '할 일 관리는 매일 반복 방문하는 서비스입니다. 일회성 노출이 아닌 반복 노출 지면을 협의할 수 있습니다.',
+  },
+  {
+    icon: '🤝',
+    bg: '#e6f9ee',
+    color: '#00ca48',
+    title: '유연한 집행',
+    desc: '배너, 스폰서십, 뉴스레터, 제휴 이벤트 등 — 정해진 상품을 파는 대신 브랜드에 맞는 방식을 함께 설계합니다.',
+  },
 ];
 
 const COMPARE = [
@@ -73,9 +92,9 @@ export default function Home() {
             <a href="#beta" className="btn btn-dark">
               무료 베타 신청하기
             </a>
-            <a href="#pricing" className="btn btn-light">
+            <Link href="/pricing" className="btn btn-light">
               요금제 미리 보기
-            </a>
+            </Link>
           </div>
           <p className="hero-note">신용카드 없이 신청 · 베타 예상 요금제</p>
 
@@ -228,46 +247,20 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- Pricing ---------- */}
-      <section className="section" id="pricing">
+      {/* ---------- Pricing 티저 (자세한 요금표는 /pricing) ---------- */}
+      <section className="section-tight" id="pricing">
         <div className="container">
           <div className="section-head">
             <span className="eyebrow">베타 예상 요금제</span>
-            <h2 className="heading-lg">작은 팀도 부담 없는 가격</h2>
-            <p>인당 과금 대신 합리적인 고정 요금으로 시작하세요.</p>
+            <h2 className="heading-lg">무료부터 월 19,000원까지, 작은 팀 가격</h2>
+            <p>인당 과금 없는 고정 요금. 자세한 플랜은 요금제 페이지에서 확인하세요.</p>
           </div>
-          <div className="pricing">
-            {PLANS.map((p) => (
-              <div className={`plan${p.featured ? ' featured' : ''}`} key={p.name}>
-                {p.featured && <span className="featured-flag">가장 인기</span>}
-                <span className="plan-name">{p.name}</span>
-                <span className="plan-target">{p.target}</span>
-                <div className="plan-price">
-                  {p.price === '0' ? (
-                    '무료'
-                  ) : (
-                    <>
-                      {p.price}
-                      <small>원 / 월</small>
-                    </>
-                  )}
-                </div>
-                <p className="plan-value">{p.value}</p>
-                <a href="#beta" className={`btn ${p.featured ? 'btn-dark' : 'btn-light'} btn-block btn-sm`}>
-                  이 가격으로 신청
-                </a>
-              </div>
-            ))}
-          </div>
-          <p className="price-note">
-            표시된 금액은 확정 결제가 아니라 베타 예상 요금제입니다. 출시 시 다시 안내드립니다.
-          </p>
           <div className="pricing-cta">
-            <a href="#beta" className="btn btn-dark">
-              이 가격으로 베타 신청하기
-            </a>
+            <Link href="/pricing" className="btn btn-dark">
+              요금제 자세히 보기
+            </Link>
             <a href="#beta" className="btn btn-light">
-              팀 요금제 알림 받기
+              무료 베타 신청
             </a>
           </div>
         </div>
@@ -306,42 +299,35 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- Footer ---------- */}
-      <footer className="footer">
+      {/* ---------- 광고 · 제휴 문의 ---------- */}
+      <section className="section" id="ads">
         <div className="container">
-          <div className="footer-inner">
-            <div>
-              <div className="brand">
-                <span className="brand-dot">M</span>
-                Mindash
-              </div>
-              <p className="caption" style={{ marginTop: 10, maxWidth: 280 }}>
-                마인드맵으로 계획하고, 일정표로 바로 실행하는 가벼운 프로젝트 일정관리.
-              </p>
-            </div>
-            <div className="footer-links">
-              <a href="#features">기능</a>
-              <a href="#pricing">요금제</a>
-              <a href="#beta">베타 신청</a>
-              <Link href="/login">로그인</Link>
-              <Link href="/signup">회원가입</Link>
-            </div>
-          </div>
-
-          <div className="footer-company">
-            <p className="footer-company-name">(주)슈퍼런</p>
-            <p className="footer-company-lines">
-              대표자 이석진 · 사업자등록번호 739-87-03673
-              <br />
-              주소 서울특별시 마포구 신촌로 114 에프디빌딩 2층 · 대표번호 02-6012-1223
-              <br />
-              통신판매업신고번호 제2026-대전유성-1027호 · 출판사신고확인번호 제2014-000082호 · 등록번호 제2025-10호
+          <div className="section-head">
+            <span className="eyebrow">광고 · 제휴 문의</span>
+            <h2 className="heading-lg">Mindash 사용자에게 브랜드를 알려보세요</h2>
+            <p>
+              일과 프로젝트에 진심인 사람들이 매일 찾는 화면입니다. 광고 지면과 형태는 문의를 받아 함께 협의해
+              드립니다.
             </p>
           </div>
 
-          <p className="footer-copy">© 2026 Mindash. All rights reserved.</p>
+          <div className="grid-3" style={{ marginBottom: 40 }}>
+            {ADS_POINTS.map((a) => (
+              <div className="card" key={a.title}>
+                <span className="card-icon" style={{ background: a.bg, color: a.color }}>
+                  {a.icon}
+                </span>
+                <h3 className="heading-sm">{a.title}</h3>
+                <p>{a.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <AdInquiryForm />
         </div>
-      </footer>
+      </section>
+
+      <Footer />
     </>
   );
 }
