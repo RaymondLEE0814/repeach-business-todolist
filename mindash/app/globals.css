@@ -1057,6 +1057,15 @@ ul { list-style: none; }
 .admin-actions .admin-danger { color: #c31625; }
 .admin-empty { text-align: center; color: var(--color-ash); padding: 32px; }
 
+/* 비밀번호 재설정 확장 패널 */
+.admin-reset-row td { background: var(--color-warm-canvas); }
+.admin-reset-panel { display: flex; flex-direction: column; gap: 10px; padding: 4px 2px; }
+.admin-reset-help { font-size: 13px; color: var(--color-ash); }
+.admin-reset-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-secret { display: flex; align-items: center; gap: 10px; background: #fff; box-shadow: var(--shadow-subtle); border-radius: var(--radius-inputs); padding: 10px 14px; }
+.admin-secret code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; letter-spacing: 1px; color: var(--color-charcoal-primary); word-break: break-all; flex: 1; }
+.admin-secret-note { font-size: 12px; color: var(--color-deep-amber); }
+
 @media (max-width: 600px) {
   .pending-card { padding: 32px 24px; }
   .admin-table { min-width: 560px; }
