@@ -37,6 +37,7 @@ type Todo = {
   title: string;
   completed: boolean;
   assignee: string | null;
+  assigned_to: string | null;
   progress: string | null;
   link: string | null;
   notes: string | null;
@@ -46,6 +47,7 @@ type Todo = {
   position: number | null;
 };
 type Subtask = { id: string; todo_id: string; title: string; done: boolean };
+type Member = { user_id: string; full_name: string | null; email: string | null };
 type Toast = { key: number; icon: string; title: string; sub?: string };
 // cols: 접힌 카테고리, done: 완료 구역이 펼쳐진 카테고리. proj는 이 상태가 어느 프로젝트 것인지 표시.
 type FoldState = { proj: string | null; cols: Record<string, boolean>; done: Record<string, boolean> };
@@ -59,6 +61,11 @@ const diffOf = (d?: string | null): Difficulty => ((d as Difficulty) in DIFFICUL
 
 const CAT_COLORS = ['#ff3e00', '#0090ff', '#00ca48', '#ffbb26', '#9f4fff', '#ff58ae', '#0086fc', '#00c978'];
 const catColor = (i: number) => CAT_COLORS[i % CAT_COLORS.length];
+// 멤버는 user_id 해시로 고정색 → 카드·팝오버에서 같은 사람은 항상 같은 색
+const memberColor = (id: string) => CAT_COLORS[[...id].reduce((s, ch) => s + ch.charCodeAt(0), 0) % CAT_COLORS.length];
+const memberInitial = (m?: Member | null) => (m?.full_name || m?.email || '?').slice(0, 1).toUpperCase();
+const memberName = (m: Member, meId: string) =>
+  `${m.full_name || m.email?.split('@')[0] || '사용자'}${m.user_id === meId ? ' (나)' : ''}`;
 
 export default function Workspace({
   initialProjects,
@@ -82,6 +89,10 @@ export default function Workspace({
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [openChecklist, setOpenChecklist] = useState<Record<string, boolean>>({});
 
+  // 담당자 지정 — members: 현재 팀원, assignFor: 담당자 팝오버가 열린 todo id
+  const [members, setMembers] = useState<Member[]>([]);
+  const [assignFor, setAssignFor] = useState<string | null>(null);
+
   // 컬럼 접기 / 완료 구역 펼치기 — proj를 함께 담아 프로젝트 전환 중 이전 상태가 새 키를 덮는 것을 막는다
   const [fold, setFold] = useState<FoldState>({ proj: null, cols: {}, done: {} });
   const [pulseCat, setPulseCat] = useState<{ id: string; key: number } | null>(null);
@@ -101,6 +112,7 @@ export default function Workspace({
   const [tNotes, setTNotes] = useState('');
   const [tDiff, setTDiff] = useState<Difficulty>('normal');
   const [tDue, setTDue] = useState('');
+  const [tAssignee, setTAssignee] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
   const [catName, setCatName] = useState('');
   const [addingProject, setAddingProject] = useState(false);
@@ -118,6 +130,7 @@ export default function Workspace({
   const [eNotes, setENotes] = useState('');
   const [eDiff, setEDiff] = useState<Difficulty>('normal');
   const [eDue, setEDue] = useState('');
+  const [eAssignee, setEAssignee] = useState('');
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [eCatName, setECatName] = useState('');
 
@@ -170,6 +183,23 @@ export default function Workspace({
     return () => clearTimeout(id);
   }, [pulseCat]);
 
+  // 담당자 팝오버: 바깥 클릭 / Esc 로 닫기
+  useEffect(() => {
+    if (!assignFor) return;
+    const onDown = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-assign-menu]')) setAssignFor(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAssignFor(null);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [assignFor]);
+
   const load = useCallback(
     async (projectId: string) => {
       setLoading(true);
@@ -177,27 +207,27 @@ export default function Workspace({
         supabase.from('categories').select('id,name').eq('project_id', projectId).order('position'),
         supabase
           .from('todos')
-          .select('id,category_id,title,completed,assignee,progress,link,notes,difficulty,due_date,parent_id,position')
+          .select('id,category_id,title,completed,assignee,assigned_to,progress,link,notes,difficulty,due_date,parent_id,position')
           .eq('project_id', projectId)
           .order('position'),
         supabase.from('subtasks').select('id,todo_id,title,done').eq('project_id', projectId).order('position'),
       ]);
       let tds = todoR.data as Todo[] | null;
       if (todoR.error) {
-        // 마이그레이션 전(parent_id 등 없음) 폴백
+        // 마이그레이션 전(parent_id·assigned_to 등 없음) 폴백
         const fb = await supabase
           .from('todos')
           .select('id,category_id,title,completed,assignee,progress,link,notes,difficulty,due_date')
           .eq('project_id', projectId)
           .order('position');
-        tds = (fb.data ?? []).map((r) => ({ ...(r as Todo), parent_id: null, position: 0 }));
+        tds = (fb.data ?? []).map((r) => ({ ...(r as Todo), assigned_to: null, parent_id: null, position: 0 }));
         if (fb.error) {
           const fb2 = await supabase
             .from('todos')
             .select('id,category_id,title,completed,assignee,progress,link,notes')
             .eq('project_id', projectId)
             .order('position');
-          tds = (fb2.data ?? []).map((r) => ({ ...(r as Todo), difficulty: 'normal', due_date: null, parent_id: null, position: 0 }));
+          tds = (fb2.data ?? []).map((r) => ({ ...(r as Todo), assigned_to: null, difficulty: 'normal', due_date: null, parent_id: null, position: 0 }));
         }
       }
       setCategories((catR.data as Category[]) ?? []);
@@ -209,6 +239,28 @@ export default function Workspace({
     },
     [supabase]
   );
+
+  // 팀원 목록 로드 (담당자 후보). 개인 워크스페이스면 비운다. TeamPanel의 2단 조회 패턴 재사용.
+  useEffect(() => {
+    if (!teamId) {
+      setMembers([]);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      const { data: mem } = await supabase.from('team_members').select('user_id').eq('team_id', teamId);
+      const ids = (mem ?? []).map((m) => m.user_id);
+      const { data: profs } = ids.length
+        ? await supabase.from('profiles').select('id,email,full_name').in('id', ids)
+        : { data: [] as { id: string; email: string; full_name: string }[] };
+      if (!alive) return;
+      const pmap = Object.fromEntries((profs ?? []).map((p) => [p.id, p]));
+      setMembers(ids.map((id) => ({ user_id: id, full_name: pmap[id]?.full_name ?? null, email: pmap[id]?.email ?? null })));
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [supabase, teamId]);
 
   useEffect(() => {
     if (activeId) load(activeId);
@@ -351,6 +403,7 @@ export default function Workspace({
     setTNotes('');
     setTDiff('normal');
     setTDue('');
+    setTAssignee('');
   };
 
   const submitTodo = async () => {
@@ -368,6 +421,7 @@ export default function Workspace({
       completed: false,
       notes,
       assignee: '',
+      assigned_to: teamId ? tAssignee || null : null,
       progress: '0',
       link,
       difficulty: tDiff,
@@ -384,6 +438,7 @@ export default function Workspace({
         title,
         completed: false,
         assignee: '',
+        assigned_to: teamId ? tAssignee || null : null,
         progress: '0',
         link,
         notes,
@@ -399,6 +454,7 @@ export default function Workspace({
     setTNotes('');
     setTDiff('normal');
     setTDue('');
+    setTAssignee('');
   };
 
   // 마인드맵에서 노드 추가 (카테고리 최상위: parentId=null / 특정 노드 하위: parentId=노드id)
@@ -416,6 +472,7 @@ export default function Workspace({
       completed: false,
       notes: '',
       assignee: '',
+      assigned_to: null,
       progress: '0',
       link: '',
       difficulty: 'normal',
@@ -432,6 +489,7 @@ export default function Workspace({
         title,
         completed: false,
         assignee: '',
+        assigned_to: null,
         progress: '0',
         link: '',
         notes: '',
@@ -453,6 +511,7 @@ export default function Workspace({
     setENotes(t.notes ?? '');
     setEDiff(diffOf(t.difficulty));
     setEDue(t.due_date ?? '');
+    setEAssignee(t.assigned_to ?? '');
   };
 
   const saveEdit = async () => {
@@ -466,12 +525,15 @@ export default function Workspace({
       setEditingId(null);
       return;
     }
+    const nextAssigned = teamId ? eAssignee || null : cur.assigned_to;
     setTodos((prev) =>
-      prev.map((t) => (t.id === editingId ? { ...t, title, link, notes, difficulty: eDiff, due_date: eDue || null } : t))
+      prev.map((t) =>
+        t.id === editingId ? { ...t, title, link, notes, difficulty: eDiff, due_date: eDue || null, assigned_to: nextAssigned } : t
+      )
     );
     const { error } = await supabase
       .from('todos')
-      .update({ title, link, notes, difficulty: eDiff, due_date: eDue || null })
+      .update({ title, link, notes, difficulty: eDiff, due_date: eDue || null, assigned_to: nextAssigned })
       .eq('id', editingId)
       .eq('category_id', cur.category_id);
     if (error) {
@@ -533,6 +595,23 @@ export default function Workspace({
       setGDone(prevGDone);
       setGXp(prevGXp);
       alert('저장에 실패했습니다: ' + error.message);
+    }
+  };
+
+  // 담당자 지정/해제 (낙관적 업데이트 + 실패 롤백, toggle과 동일 패턴)
+  const assignTodo = async (todo: Todo, memberId: string | null) => {
+    setAssignFor(null);
+    if (todo.assigned_to === memberId) return;
+    const prevTodos = todos;
+    setTodos((prev) => prev.map((t) => (t.id === todo.id ? { ...t, assigned_to: memberId } : t)));
+    const { error } = await supabase
+      .from('todos')
+      .update({ assigned_to: memberId })
+      .eq('id', todo.id)
+      .eq('category_id', todo.category_id);
+    if (error) {
+      setTodos(prevTodos);
+      alert('담당자 지정 실패: ' + error.message);
     }
   };
 
@@ -670,6 +749,7 @@ export default function Workspace({
     setEditingId(null);
     setAddingCat(null);
     setMindAdd(null);
+    setAssignFor(null);
   };
   const onDragEnd = (e: DragEndEvent) => {
     setDragId(null);
@@ -697,6 +777,22 @@ export default function Workspace({
     </div>
   );
 
+  // 담당자 선택 UI (팀 워크스페이스 · 멤버가 있을 때만)
+  const assigneeSelector = (value: string, onChange: (v: string) => void) =>
+    teamId && members.length > 0 ? (
+      <>
+        <div className="ws-difflabel">👤 담당자</div>
+        <select className="ws-input ws-assignee-select" value={value} onChange={(e) => onChange(e.target.value)}>
+          <option value="">담당자 없음</option>
+          {members.map((m) => (
+            <option key={m.user_id} value={m.user_id}>
+              {memberName(m, userId)}
+            </option>
+          ))}
+        </select>
+      </>
+    ) : null;
+
   const addTodoForm = (categoryId: string) =>
     addingCat === categoryId ? (
       <div className="ws-addform">
@@ -722,6 +818,7 @@ export default function Workspace({
             </button>
           )}
         </div>
+        {assigneeSelector(tAssignee, setTAssignee)}
         <input
           className="ws-input"
           placeholder="🔗 링크 (선택) — 예: example.com"
@@ -780,6 +877,7 @@ export default function Workspace({
           </button>
         )}
       </div>
+      {assigneeSelector(eAssignee, setEAssignee)}
       <input
         className="ws-input"
         placeholder="🔗 링크 (선택)"
@@ -961,6 +1059,8 @@ export default function Workspace({
     if (editingId === t.id) return <div key={t.id}>{editTodoForm()}</div>;
     const childForm = mindAdd?.parentId === t.id;
     const cs = t.children.length ? subtreeStats(t) : null;
+    const assignedMember = t.assigned_to ? members.find((m) => m.user_id === t.assigned_to) ?? null : null;
+    const assignedGone = !!t.assigned_to && !assignedMember; // 팀 나간 멤버
     return (
       <div className="ws-tree-node" key={t.id}>
         {editingId === t.id ? (
@@ -1014,6 +1114,80 @@ export default function Workspace({
                   </button>
                 </span>
               </label>
+              {teamId && (
+                <span className="ws-assignee-wrap" data-assign-menu>
+                  <button
+                    className={`ws-assignee-btn${
+                      !t.assigned_to ? ' ws-assignee-empty' : assignedGone ? ' ws-assignee-gone' : ''
+                    }${t.assigned_to && !assignedGone ? ' ws-assign-pop' : ''}`}
+                    key={t.assigned_to ?? 'none'}
+                    style={t.assigned_to && !assignedGone ? { background: memberColor(t.assigned_to) } : undefined}
+                    aria-haspopup="menu"
+                    aria-expanded={assignFor === t.id}
+                    aria-label={
+                      !t.assigned_to
+                        ? '담당자 지정'
+                        : assignedGone
+                        ? '팀을 나간 멤버 · 클릭해 변경'
+                        : `담당: ${memberName(assignedMember!, userId).replace(' (나)', '')} · 클릭해 변경`
+                    }
+                    title={
+                      !t.assigned_to
+                        ? '담당자 지정'
+                        : assignedGone
+                        ? '팀을 나간 멤버'
+                        : `담당: ${memberName(assignedMember!, userId).replace(' (나)', '')} · 클릭해 변경`
+                    }
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setAssignFor((cur) => (cur === t.id ? null : t.id));
+                    }}
+                  >
+                    {!t.assigned_to ? '+' : assignedGone ? '?' : memberInitial(assignedMember)}
+                  </button>
+                  {assignFor === t.id && (
+                    <div className="ws-assignee-menu" role="menu">
+                      {t.assigned_to !== userId && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="ws-assignee-item ws-assignee-me"
+                          onClick={() => assignTodo(t, userId)}
+                        >
+                          👋 내가 맡기
+                        </button>
+                      )}
+                      {members.map((m) => (
+                        <button
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={m.user_id === t.assigned_to}
+                          className="ws-assignee-item"
+                          key={m.user_id}
+                          onClick={() => assignTodo(t, m.user_id)}
+                        >
+                          <span className="ws-assignee-dot" style={{ background: memberColor(m.user_id) }}>
+                            {memberInitial(m)}
+                          </span>
+                          {memberName(m, userId)}
+                          {m.user_id === t.assigned_to && <span className="ws-assignee-check">✓</span>}
+                        </button>
+                      ))}
+                      {t.assigned_to && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="ws-assignee-item ws-assignee-clear"
+                          onClick={() => assignTodo(t, null)}
+                        >
+                          담당 해제
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </span>
+              )}
               <span className="ws-item-actions">
                 <button className="ws-edit" onClick={() => openEdit(t)} title="편집">
                   ✎

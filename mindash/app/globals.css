@@ -613,6 +613,48 @@ ul { list-style: none; }
 }
 
 /* ============================================================
+   할 일 담당자 — 아바타 + 팝오버 (팀 워크스페이스)
+   같은 사람은 어디서나 같은 색. 지정은 팀원 누구나, "내가 맡기"가 1순위.
+   ============================================================ */
+.ws-assignee-wrap { position: relative; flex-shrink: 0; display: inline-flex; align-self: flex-start; margin-top: 1px; }
+.ws-assignee-btn {
+  width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #fff; line-height: 1; transition: opacity 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.ws-assignee-empty { background: transparent; border: 1.5px dashed var(--color-fog); color: var(--color-ash); font-size: 13px; }
+.ws-assignee-empty:hover { border-color: var(--color-ember-orange); color: var(--color-ember-orange); }
+.ws-assignee-gone { background: var(--color-smoke); }
+.ws-assignee-btn:focus-visible { outline: 2px solid var(--color-ember-orange); outline-offset: 2px; }
+.ws-assignee-menu {
+  position: absolute; right: 0; top: 26px; z-index: 60; min-width: 190px; background: #fff;
+  border-radius: 10px; box-shadow: var(--shadow-lg); padding: 6px; display: flex; flex-direction: column; gap: 2px;
+}
+.ws-assignee-item {
+  display: flex; align-items: center; gap: 8px; text-align: left; font-size: 13px; font-weight: 500;
+  color: var(--color-charcoal-primary); padding: 7px 9px; border-radius: 7px; transition: background-color 0.12s ease;
+}
+.ws-assignee-item:hover { background: var(--color-stone-surface); }
+.ws-assignee-item[aria-checked='true'] { font-weight: 700; }
+.ws-assignee-check { margin-left: auto; color: var(--color-meadow-green); font-weight: 700; }
+.ws-assignee-me { color: var(--color-ember-orange); font-weight: 600; }
+.ws-assignee-clear { color: var(--color-ash); border-top: 1px dashed var(--color-stone-surface); border-radius: 0 0 7px 7px; }
+.ws-assignee-dot {
+  width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center;
+  justify-content: center; font-size: 9px; font-weight: 700; color: #fff;
+}
+.ws-assignee-select { width: 100%; }
+@keyframes ws-assign-pop { 0% { transform: scale(0.4); } 65% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.ws-assign-pop { animation: ws-assign-pop 0.4s cubic-bezier(0.19, 1, 0.22, 1); }
+/* 빈 슬롯은 호버 기기에서만 숨김 (ws-sub-toggle-ghost 패턴) */
+@media (hover: hover) and (pointer: fine) {
+  .ws-assignee-empty { opacity: 0; }
+  .ws-item:hover .ws-assignee-empty, .ws-assignee-empty:focus-visible, .ws-assignee-empty[aria-expanded='true'] { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-assign-pop { animation: none; }
+}
+
+/* ============================================================
    팀(그룹) 워크스페이스
    ============================================================ */
 /* 상단 바: 좌측 탭 + 우측 토글 한 줄 */
