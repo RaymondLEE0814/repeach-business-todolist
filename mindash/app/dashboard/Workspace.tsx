@@ -47,6 +47,11 @@ type Todo = {
 };
 type Subtask = { id: string; todo_id: string; title: string; done: boolean };
 type Toast = { key: number; icon: string; title: string; sub?: string };
+// cols: 접힌 카테고리, done: 완료 구역이 펼쳐진 카테고리. proj는 이 상태가 어느 프로젝트 것인지 표시.
+type FoldState = { proj: string | null; cols: Record<string, boolean>; done: Record<string, boolean> };
+
+const EMPTY_FOLD: Record<string, boolean> = {};
+const foldKey = (projectId: string) => `mindash:fold:v1:${projectId}`;
 
 const uid = () => globalThis.crypto.randomUUID();
 const normalizeUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : `https://${u}`);
@@ -76,6 +81,18 @@ export default function Workspace({
   const [view, setView] = useState<'list' | 'mindmap'>('list');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [openChecklist, setOpenChecklist] = useState<Record<string, boolean>>({});
+
+  // 컬럼 접기 / 완료 구역 펼치기 — proj를 함께 담아 프로젝트 전환 중 이전 상태가 새 키를 덮는 것을 막는다
+  const [fold, setFold] = useState<FoldState>({ proj: null, cols: {}, done: {} });
+  const [pulseCat, setPulseCat] = useState<{ id: string; key: number } | null>(null);
+  const foldReady = fold.proj === activeId;
+  const collapsedCats = foldReady ? fold.cols : EMPTY_FOLD;
+  const openDone = foldReady ? fold.done : EMPTY_FOLD;
+  const patchFold = (key: 'cols' | 'done', catId: string, value: boolean) =>
+    setFold((f) => {
+      const base: FoldState = f.proj === activeId ? f : { proj: activeId, cols: {}, done: {} };
+      return { ...base, [key]: { ...base[key], [catId]: value } };
+    });
 
   // 추가 폼 상태
   const [addingCat, setAddingCat] = useState<string | null>(null);
@@ -147,6 +164,12 @@ export default function Workspace({
     return () => clearTimeout(id);
   }, [toast]);
 
+  useEffect(() => {
+    if (!pulseCat) return;
+    const id = setTimeout(() => setPulseCat(null), 600);
+    return () => clearTimeout(id);
+  }, [pulseCat]);
+
   const load = useCallback(
     async (projectId: string) => {
       setLoading(true);
@@ -196,6 +219,40 @@ export default function Workspace({
     }
   }, [activeId, load]);
 
+  // 접힘 상태 복원 (프로젝트 전환 시)
+  useEffect(() => {
+    if (!activeId) {
+      setFold({ proj: null, cols: {}, done: {} });
+      return;
+    }
+    const cols: Record<string, boolean> = {};
+    const done: Record<string, boolean> = {};
+    try {
+      const raw = localStorage.getItem(foldKey(activeId));
+      if (raw) {
+        const parsed = JSON.parse(raw) as { c?: string[]; d?: string[] };
+        (parsed.c ?? []).forEach((id) => (cols[id] = true));
+        (parsed.d ?? []).forEach((id) => (done[id] = true));
+      }
+    } catch {
+      // 손상된 값은 무시하고 전부 펼친 상태로 시작
+    }
+    setFold({ proj: activeId, cols, done });
+  }, [activeId]);
+
+  // 접힘 상태 저장 (현재 프로젝트 것일 때만)
+  useEffect(() => {
+    if (!activeId || fold.proj !== activeId) return;
+    const c = Object.keys(fold.cols).filter((id) => fold.cols[id]);
+    const d = Object.keys(fold.done).filter((id) => fold.done[id]);
+    try {
+      if (c.length || d.length) localStorage.setItem(foldKey(activeId), JSON.stringify({ c, d }));
+      else localStorage.removeItem(foldKey(activeId));
+    } catch {
+      // 저장 실패(사파리 프라이빗 등)해도 이번 세션 동작에는 영향 없음
+    }
+  }, [activeId, fold]);
+
   // 챗봇이 데이터를 바꾸면 재로딩
   useEffect(() => {
     const h = () => {
@@ -226,6 +283,9 @@ export default function Workspace({
     await supabase.from('categories').delete().eq('project_id', project.id);
     const { error } = await supabase.from('projects').delete().eq('id', project.id);
     if (error) return alert('삭제 실패: ' + error.message);
+    try {
+      localStorage.removeItem(foldKey(project.id));
+    } catch {}
     setProjects((prev) => {
       const next = prev.filter((p) => p.id !== project.id);
       if (activeId === project.id) setActiveId(next[0]?.id ?? null);
@@ -259,6 +319,10 @@ export default function Workspace({
     if (error) return alert('삭제 실패: ' + error.message);
     setCategories((prev) => prev.filter((c) => c.id !== cat.id));
     setTodos((prev) => prev.filter((t) => t.category_id !== cat.id));
+    setFold((f) => {
+      const drop = (m: Record<string, boolean>) => Object.fromEntries(Object.entries(m).filter(([id]) => id !== cat.id));
+      return { ...f, cols: drop(f.cols), done: drop(f.done) };
+    });
     refreshGlobalXp();
   };
 
@@ -546,6 +610,15 @@ export default function Workspace({
   const activeProject = projects.find((p) => p.id === activeId) ?? null;
   const tree = useMemo(() => buildTree(todos), [todos]);
 
+  const anyExpanded = categories.some((c) => !collapsedCats[c.id]);
+  const setAllCollapsed = (collapsed: boolean) =>
+    setFold((f) => {
+      const base: FoldState = f.proj === activeId ? f : { proj: activeId, cols: {}, done: {} };
+      const cols: Record<string, boolean> = {};
+      if (collapsed) categories.forEach((c) => (cols[c.id] = true));
+      return { ...base, proj: activeId, cols };
+    });
+
   // ---------- 드래그앤드롭(카테고리 간 이동) ----------
   const [dragId, setDragId] = useState<string | null>(null);
   const sensors = useSensors(
@@ -583,6 +656,8 @@ export default function Workspace({
       alert('이동 실패: ' + r1.error.message);
       return;
     }
+    // 접힌 컬럼으로 옮겼으면 카운트를 튕겨서 도착을 알린다 (컬럼은 접힌 채로 둔다)
+    if (collapsedCats[targetCatId]) setPulseCat({ id: targetCatId, key: Date.now() });
     // ② 자손 카테고리 일괄
     if (descIds.length) {
       const r2 = await supabase.from('todos').update({ category_id: targetCatId }).eq('project_id', activeId).in('id', descIds);
@@ -910,7 +985,7 @@ export default function Workspace({
                       </span>
                     )}
                     {t.link ? (
-                      <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer">
+                      <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer" title={t.link}>
                         {t.title}
                       </a>
                     ) : (
@@ -925,9 +1000,16 @@ export default function Workspace({
                       <span className={`ws-due ws-due-${bucketOf(t.due_date)}`}>📅 {dueLabel(t.due_date)}</span>
                     )}
                   </span>
-                  {t.link ? <span className="ws-link">🔗 {t.link}</span> : null}
-                  {t.notes ? <span className="ws-note">{t.notes}</span> : null}
-                  <button className="ws-sub-toggle" onClick={() => setOpenChecklist((o) => ({ ...o, [t.id]: !o[t.id] }))}>
+                  {t.notes ? (
+                    <span className="ws-note" title={t.notes}>
+                      {t.notes}
+                    </span>
+                  ) : null}
+                  <button
+                    className={`ws-sub-toggle${subs.length === 0 ? ' ws-sub-toggle-ghost' : ''}`}
+                    aria-expanded={open}
+                    onClick={() => setOpenChecklist((o) => ({ ...o, [t.id]: !o[t.id] }))}
+                  >
                     {subs.length > 0 ? `☑ 체크리스트 ${subDone}/${subs.length}` : '＋ 체크리스트'} {open ? '▾' : '▸'}
                   </button>
                 </span>
@@ -1077,6 +1159,11 @@ export default function Workspace({
                 <div className="ws-bar-fill" style={{ width: `${pct}%` }} />
               </div>
             </div>
+            {view === 'list' && categories.length > 1 && (
+              <button className="ws-fold-all" onClick={() => setAllCollapsed(anyExpanded)}>
+                {anyExpanded ? '모두 접기' : '모두 펼치기'}
+              </button>
+            )}
             {activeProject && canManage && (
               <button className="ws-del-project" onClick={() => deleteProject(activeProject)} title="프로젝트 삭제">
                 프로젝트 삭제
@@ -1159,9 +1246,30 @@ export default function Workspace({
               {categories.map((cat) => {
                 const items = todos.filter((t) => t.category_id === cat.id);
                 const catDone = items.filter((t) => t.completed).length;
+                const catPct = items.length ? Math.round((catDone / items.length) * 100) : 0;
+                // 서브트리까지 전부 끝난 루트만 완료 구역으로 내린다. 하위가 남은 루트는 활성 구역에 남겨 묻히지 않게 한다.
+                const doneRoots: Node<Todo>[] = [];
+                const activeRoots: Node<Todo>[] = [];
+                for (const n of tree.rootsByCategory.get(cat.id) ?? []) {
+                  const s = subtreeStats(n);
+                  (s.done === s.total ? doneRoots : activeRoots).push(n);
+                }
+                const collapsed = !!collapsedCats[cat.id];
+                const showDone = !!openDone[cat.id];
+                const foldLabel = `'${cat.name}' 컬럼 ${collapsed ? '펼치기' : '접기'}`;
+                const pulsing = pulseCat?.id === cat.id;
                 return (
-                  <div className="ws-col" key={cat.id}>
+                  <div className={`ws-col${collapsed ? ' ws-col-folded' : ''}`} key={cat.id}>
                     <div className="ws-col-head">
+                      <button
+                        className="ws-fold"
+                        aria-expanded={!collapsed}
+                        aria-label={foldLabel}
+                        title={foldLabel}
+                        onClick={() => patchFold('cols', cat.id, !collapsed)}
+                      >
+                        {collapsed ? '▸' : '▾'}
+                      </button>
                       {editingCatId === cat.id ? (
                         <input
                           className="ws-input"
@@ -1179,7 +1287,10 @@ export default function Workspace({
                         </span>
                       )}
                       <span className="ws-col-right">
-                        <span className="ws-col-count">
+                        <span
+                          className={`ws-col-count${pulsing ? ' ws-count-pulse' : ''}`}
+                          key={pulsing ? pulseCat.key : 'count'}
+                        >
                           {catDone}/{items.length}
                         </span>
                         <button className="ws-edit" onClick={() => openEditCat(cat)} title="이름 변경">
@@ -1192,10 +1303,35 @@ export default function Workspace({
                         )}
                       </span>
                     </div>
-                    <DroppableColumn id={`cat:${cat.id}`}>
-                      {(tree.rootsByCategory.get(cat.id) ?? []).map((n) => renderTodo(n))}
-                      {addTodoForm(cat.id)}
-                    </DroppableColumn>
+                    {collapsed ? (
+                      // 접혀 있어도 드롭은 받는다. 진행 미터가 항상 안에 있어 rect가 0이 되지 않는다.
+                      <DroppableColumn id={`cat:${cat.id}`} className="ws-fold-drop">
+                        <div className="ws-col-meter" role="img" aria-label={`진행률 ${catPct}%`}>
+                          <div className="ws-col-meter-fill" style={{ width: `${catPct}%` }} />
+                        </div>
+                        {dragId ? <div className="ws-fold-hint">여기에 놓기</div> : null}
+                      </DroppableColumn>
+                    ) : (
+                      <DroppableColumn id={`cat:${cat.id}`}>
+                        {activeRoots.map((n) => renderTodo(n))}
+                        {activeRoots.length === 0 && doneRoots.length > 0 && (
+                          <p className="ws-empty">이 카테고리의 할 일을 모두 끝냈어요</p>
+                        )}
+                        {addTodoForm(cat.id)}
+                        {doneRoots.length > 0 && (
+                          <div className="ws-done-fold">
+                            <button
+                              className="ws-done-toggle"
+                              aria-expanded={showDone}
+                              onClick={() => patchFold('done', cat.id, !showDone)}
+                            >
+                              완료 {doneRoots.length}개 {showDone ? '접기 ▾' : '보기 ▸'}
+                            </button>
+                            {showDone && doneRoots.map((n) => renderTodo(n))}
+                          </div>
+                        )}
+                      </DroppableColumn>
+                    )}
                   </div>
                 );
               })}

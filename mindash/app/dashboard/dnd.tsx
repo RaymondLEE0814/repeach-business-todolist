@@ -22,10 +22,18 @@ export function DraggableTodo({
 }
 
 // 카테고리 컬럼 = 드롭 대상 (id: `cat:<categoryId>`)
-export function DroppableColumn({ id, children }: { id: string; children: ReactNode }) {
+export function DroppableColumn({
+  id,
+  className = 'ws-list',
+  children,
+}: {
+  id: string;
+  className?: string;
+  children: ReactNode;
+}) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div ref={setNodeRef} className={`ws-list${isOver ? ' ws-drop-over' : ''}`}>
+    <div ref={setNodeRef} className={`${className}${isOver ? ' ws-drop-over' : ''}`}>
       {children}
     </div>
   );
