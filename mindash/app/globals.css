@@ -344,7 +344,7 @@ ul { list-style: none; }
    Dashboard (보호 라우트 — 향후 워크스페이스)
    ============================================================ */
 .dash-nav { background: #fff; box-shadow: var(--shadow-nav); }
-.dash-main { max-width: 960px; margin: 0 auto; padding: 56px 24px; }
+.dash-main { max-width: var(--page-max-width); margin: 0 auto; padding: 56px 24px; }
 .dash-hello { font-family: var(--font-family); font-weight: 500; font-size: 34px; letter-spacing: -1px; color: var(--color-charcoal-primary); }
 .dash-card { background: #fff; border-radius: var(--radius-cards-large); box-shadow: var(--shadow-subtle); padding: 36px; margin-top: 28px; }
 .dash-soon { display: inline-block; font-size: 12px; font-weight: 600; color: var(--color-deep-amber); background: #fff6e0; padding: 4px 10px; border-radius: 6px; margin-bottom: 14px; }
@@ -373,7 +373,7 @@ ul { list-style: none; }
 .ws-bar { height: 9px; border-radius: 6px; background: var(--color-stone-surface); overflow: hidden; }
 .ws-bar-fill { height: 100%; background: var(--color-meadow-green); border-radius: 6px; transition: width 0.3s ease; }
 
-.ws-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; align-items: start; }
+.ws-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; align-items: start; }
 .ws-col { background: var(--color-parchment-card); border-radius: var(--radius-cards); padding: 16px; }
 .ws-col-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px; }
 .ws-col-name { font-size: 14px; font-weight: 600; color: var(--color-charcoal-primary); }
@@ -382,14 +382,14 @@ ul { list-style: none; }
 .ws-item {
   display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
   background: #fff; border-radius: 8px; box-shadow: var(--shadow-subtle);
-  padding: 9px 12px; transition: box-shadow 0.2s ease;
+  padding: 10px 12px; transition: box-shadow 0.2s ease;
 }
 .ws-item:hover { box-shadow: var(--shadow-hover); }
 .ws-item input { position: absolute; opacity: 0; width: 0; height: 0; }
 .ws-check { width: 19px; height: 19px; border-radius: 6px; border: 2px solid var(--color-fog); flex-shrink: 0; margin-top: 1px; position: relative; transition: background-color 0.15s ease, border-color 0.15s ease; }
 .ws-check.done { background: var(--color-meadow-green); border-color: var(--color-meadow-green); }
 .ws-check.done::after { content: '✓'; color: #fff; font-size: 12px; font-weight: 700; position: absolute; top: -2px; left: 2px; }
-.ws-text { font-size: 14px; line-height: 1.4; color: var(--color-charcoal-primary); }
+.ws-text { font-size: 14px; line-height: 1.4; color: var(--color-charcoal-primary); word-break: keep-all; overflow-wrap: anywhere; }
 .ws-text.done { color: var(--color-ash); text-decoration: line-through; }
 .ws-text a { color: var(--color-sky-blue); }
 .ws-text a:hover { text-decoration: underline; }
@@ -404,7 +404,7 @@ ul { list-style: none; }
 .ws-col-right { display: flex; align-items: center; gap: 4px; }
 .ws-item-actions { display: flex; align-items: center; gap: 1px; flex-shrink: 0; }
 .ws-edit {
-  opacity: 0; color: var(--color-smoke); font-size: 13px; line-height: 1;
+  color: var(--color-smoke); font-size: 13px; line-height: 1;
   padding: 0 4px; flex-shrink: 0; transition: opacity 0.15s ease, color 0.15s ease;
 }
 .ws-item:hover .ws-edit, .ws-col-head:hover .ws-edit { opacity: 1; }
@@ -412,7 +412,7 @@ ul { list-style: none; }
 .ws-item { position: relative; }
 .ws-item-main { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; flex: 1; }
 .ws-x {
-  opacity: 0; color: var(--color-smoke); font-size: 17px; line-height: 1;
+  color: var(--color-smoke); font-size: 17px; line-height: 1;
   padding: 0 4px; flex-shrink: 0; transition: opacity 0.15s ease, color 0.15s ease;
 }
 .ws-item:hover .ws-x, .ws-col-head:hover .ws-x { opacity: 1; }
@@ -428,7 +428,7 @@ ul { list-style: none; }
 /* 인라인 입력 폼 (팝업 대체) + 비고 표시 (링크는 제목 자체가 하이퍼링크라 별도 URL 행 제거) */
 .ws-text-wrap { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
 /* 비고는 스캔용 보조 정보 — 2줄까지만. 전문은 title 툴팁과 편집 폼에서 확인 */
-.ws-note { font-size: 12px; color: var(--color-ash); line-height: 1.45; white-space: pre-wrap; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ws-note { font-size: 12px; color: var(--color-ash); line-height: 1.45; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ws-input {
   width: 100%; font-family: inherit; font-size: 14px; color: var(--color-charcoal-primary);
   background: var(--color-warm-canvas); border-radius: 8px; box-shadow: var(--shadow-subtle);
@@ -539,7 +539,7 @@ ul { list-style: none; }
 .ws-childmark { color: var(--color-fog); margin-right: 4px; font-weight: 700; }
 
 /* ---------- 드래그앤드롭 ---------- */
-.ws-drag { flex-shrink: 0; cursor: grab; color: var(--color-fog); font-size: 15px; line-height: 1; padding: 2px 2px 0; user-select: none; touch-action: none; opacity: 0; transition: opacity 0.15s ease, color 0.15s ease; }
+.ws-drag { flex-shrink: 0; cursor: grab; color: var(--color-fog); font-size: 15px; line-height: 1; padding: 2px 2px 0; user-select: none; touch-action: none; transition: opacity 0.15s ease, color 0.15s ease; }
 .ws-item:hover .ws-drag { opacity: 1; }
 .ws-drag:hover { color: var(--color-ash); }
 .ws-drag:active { cursor: grabbing; }
@@ -653,6 +653,43 @@ ul { list-style: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ws-assign-pop { animation: none; }
+}
+
+/* ============================================================
+   목록 카드 v2 — 제목이 첫 줄을 독점. 난이도·마감·체크리스트·담당·액션은 아랫줄로.
+   ============================================================ */
+.ws-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ws-text { font-weight: 500; }
+.ws-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; padding-left: 29px; }
+.ws-meta-right { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; }
+.ws-meta .ws-diff, .ws-meta .ws-due, .ws-meta .mm-substat { margin: 0; vertical-align: baseline; }
+.ws-meta .ws-sub-toggle { margin-top: 0; padding: 2px 4px; }
+.ws-meta .ws-assignee-wrap { margin-top: 0; align-self: center; }
+/* 목록 뷰의 +하위는 .mm-leaf:hover 규칙이 닿지 않아 안 보이던 버그 수정 */
+.ws-item-actions .mm-addchild { opacity: 1; }
+
+/* 호버 기기에서만 컨트롤 숨김 — 터치에서는 항상 보인다 */
+@media (hover: hover) and (pointer: fine) {
+  .ws-drag { opacity: 0; }
+  .ws-item .ws-item-actions { opacity: 0; transition: opacity 0.15s ease; }
+  .ws-item:hover .ws-item-actions, .ws-item:focus-within .ws-item-actions { opacity: 1; }
+  .ws-col-head .ws-edit, .ws-col-head .ws-x { opacity: 0; }
+  .ws-col-head:hover .ws-edit, .ws-col-head:hover .ws-x { opacity: 1; }
+}
+
+/* 모바일: 1열 풀폭 + 탭 타깃 확보 */
+@media (max-width: 600px) {
+  .dash-main { padding: 32px 14px 56px; }
+  .ws-cols { grid-template-columns: 1fr; gap: 14px; }
+  .ws-col { padding: 12px; }
+  .ws-item { padding: 12px; }
+  .ws-children { margin-left: 8px; padding-left: 10px; }
+  .ws-drag { font-size: 17px; padding: 4px 6px 4px 0; }
+  .ws-edit, .ws-x { font-size: 15px; padding: 6px 8px; }
+  .ws-item-actions .mm-addchild { padding: 6px 8px; }
+  .ws-meta .ws-sub-toggle { padding: 6px 4px; }
+  .ws-assignee-btn { width: 26px; height: 26px; font-size: 11px; }
+  .ws-assignee-menu { top: 32px; }
 }
 
 /* ============================================================

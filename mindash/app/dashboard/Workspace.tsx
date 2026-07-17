@@ -1090,23 +1090,33 @@ export default function Workspace({
                   <span className="ws-drag" {...handle} title="드래그하여 이동">
                     ⠿
                   </span>
+                  <div className="ws-item-body">
                   <label className="ws-item-main">
                     <input type="checkbox" checked={t.completed} onChange={() => toggle(t)} />
-                <span className={`ws-check${t.completed ? ' done' : ''}`} />
-                <span className="ws-text-wrap">
-                  <span className={`ws-text${t.completed ? ' done' : ''}`}>
-                    {depth > 0 && <span className="ws-childmark">↳</span>}
+                    <span className={`ws-check${t.completed ? ' done' : ''}`} />
+                    <span className="ws-text-wrap">
+                      <span className={`ws-text${t.completed ? ' done' : ''}`}>
+                        {depth > 0 && <span className="ws-childmark">↳</span>}
+                        {t.link ? (
+                          <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer" title={t.link}>
+                            {t.title}
+                          </a>
+                        ) : (
+                          t.title
+                        )}
+                      </span>
+                      {t.notes ? (
+                        <span className="ws-note" title={t.notes}>
+                          {t.notes}
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                  <div className="ws-meta">
                     {d !== 'normal' && (
                       <span className="ws-diff" style={{ color: DIFFICULTY[d].color, borderColor: DIFFICULTY[d].color }}>
                         {DIFFICULTY[d].label}
                       </span>
-                    )}
-                    {t.link ? (
-                      <a href={normalizeUrl(t.link)} target="_blank" rel="noreferrer" title={t.link}>
-                        {t.title}
-                      </a>
-                    ) : (
-                      t.title
                     )}
                     {cs && (
                       <span className="mm-substat">
@@ -1116,21 +1126,14 @@ export default function Workspace({
                     {t.due_date && !t.completed && (
                       <span className={`ws-due ws-due-${bucketOf(t.due_date)}`}>📅 {dueLabel(t.due_date)}</span>
                     )}
-                  </span>
-                  {t.notes ? (
-                    <span className="ws-note" title={t.notes}>
-                      {t.notes}
-                    </span>
-                  ) : null}
-                  <button
-                    className={`ws-sub-toggle${subs.length === 0 ? ' ws-sub-toggle-ghost' : ''}`}
-                    aria-expanded={open}
-                    onClick={() => setOpenChecklist((o) => ({ ...o, [t.id]: !o[t.id] }))}
-                  >
-                    {subs.length > 0 ? `☑ 체크리스트 ${subDone}/${subs.length}` : '＋ 체크리스트'} {open ? '▾' : '▸'}
-                  </button>
-                </span>
-              </label>
+                    <button
+                      className={`ws-sub-toggle${subs.length === 0 ? ' ws-sub-toggle-ghost' : ''}`}
+                      aria-expanded={open}
+                      onClick={() => setOpenChecklist((o) => ({ ...o, [t.id]: !o[t.id] }))}
+                    >
+                      {subs.length > 0 ? `☑ 체크리스트 ${subDone}/${subs.length}` : '＋ 체크리스트'} {open ? '▾' : '▸'}
+                    </button>
+                    <span className="ws-meta-right">
               {teamId && (
                 <span className="ws-assignee-wrap" data-assign-menu>
                   <button
@@ -1225,7 +1228,10 @@ export default function Workspace({
                   ×
                 </button>
               </span>
-            </div>
+                    </span>
+                  </div>
+                  </div>
+                </div>
                 {open && checklistPanel(t)}
               </div>
             )}
