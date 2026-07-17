@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { parseQuotaError, QUOTA_COPY } from '@/lib/plan';
 
 type Member = { user_id: string; role: string; full_name: string | null; email: string | null };
 type Invite = { id: string; email: string; role: string; token: string; expires_at: string };
@@ -83,6 +84,8 @@ export default function TeamPanel({
     setBusy(false);
     if (error) {
       if (error.code === '23505') return alert('이미 대기 중인 초대가 있는 이메일입니다.');
+      const q = parseQuotaError(error.message);
+      if (q) return alert(QUOTA_COPY[q].body);
       return alert('초대 실패: ' + error.message);
     }
     setInvites((v) => [data as Invite, ...v]);
