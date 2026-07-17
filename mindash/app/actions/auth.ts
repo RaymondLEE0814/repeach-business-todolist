@@ -54,13 +54,27 @@ export async function signUp(
 ): Promise<AuthState> {
   const email = String(formData.get('email') || '').trim();
   const password = String(formData.get('password') || '');
+  const passwordConfirm = String(formData.get('passwordConfirm') || '');
   const name = String(formData.get('name') || '').trim();
+  const nickname = String(formData.get('nickname') || '').trim();
+  const phone = String(formData.get('phone') || '').trim();
 
+  if (!name) {
+    return { error: '이름을 입력해 주세요.' };
+  }
   if (!email || !password) {
     return { error: '이메일과 비밀번호를 입력해 주세요.' };
   }
   if (password.length < 6) {
-    return { error: '비밀번호는 6자 이상이어야 합니다.' };
+    return { error: '비밀번호는 6자 이상이어야 해요.' };
+  }
+  if (password !== passwordConfirm) {
+    return { error: '비밀번호가 일치하지 않아요.' };
+  }
+  // 연락처는 선택. 입력했을 때만 형식 검증(숫자만 추출, 0으로 시작하는 9~11자리).
+  const phoneDigits = phone.replace(/\D/g, '');
+  if (phone && !/^0\d{8,10}$/.test(phoneDigits)) {
+    return { error: '연락처 형식을 확인해 주세요. 예: 010-1234-5678' };
   }
 
   const origin =
@@ -72,16 +86,21 @@ export async function signUp(
     password,
     options: {
       // 'app' 마커로 이 가입이 Mindash 소속임을 표시 → 트리거가 이 경우만 profiles 생성
-      data: { full_name: name || null, app: 'mindash' },
+      data: {
+        full_name: name,
+        nickname: nickname || null,
+        phone: phoneDigits || null,
+        app: 'mindash',
+      },
       emailRedirectTo: `${origin}/auth/confirm`,
     },
   });
 
   if (error) {
     if (error.message.toLowerCase().includes('already')) {
-      return { error: '이미 가입된 이메일입니다. 로그인해 주세요.' };
+      return { error: '이미 가입된 이메일이에요. 로그인해 주세요.' };
     }
-    return { error: '회원가입에 실패했습니다. 잠시 후 다시 시도해 주세요.' };
+    return { error: '회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.' };
   }
 
   // 이메일 확인이 꺼져 있으면 곧바로 세션이 생성됨 → 승인 대기 페이지로

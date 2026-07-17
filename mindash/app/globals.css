@@ -312,6 +312,7 @@ ul { list-style: none; }
 .form-msg { padding: 12px 14px; border-radius: var(--radius-inputs); font-size: 14px; margin-bottom: 16px; }
 .form-msg.error { background: #ffeceb; color: var(--color-coral-red); }
 .form-msg.success { background: #e6f9ee; color: var(--color-valid-green); }
+.field-err { font-size: 12.5px; color: var(--color-coral-red); margin-top: 6px; }
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .beta-success { text-align: center; padding: 24px 0; }
 .beta-success .icon { width: 56px; height: 56px; border-radius: 50%; background: var(--color-meadow-green); color: #fff; font-size: 28px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
