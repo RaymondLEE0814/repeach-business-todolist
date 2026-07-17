@@ -1,13 +1,14 @@
 'use client';
 
 import { Fragment, useState, useTransition } from 'react';
-import { setUserStatus, setAdmin, issueTempPassword, issueResetLink } from '@/app/actions/admin';
+import { setUserStatus, setAdmin, setUserPlan, issueTempPassword, issueResetLink } from '@/app/actions/admin';
 
 export type AdminUserRow = {
   id: string;
   email: string | null;
   fullName: string | null;
   status: 'pending' | 'approved' | 'rejected';
+  plan: 'free' | 'pro';
   createdAt: string | null;
   approvedAt: string | null;
   isAdmin: boolean;
@@ -178,6 +179,16 @@ export default function AdminUsers({
                             관리자 해제
                           </button>
                         )
+                      )}
+                      {!r.isAdmin && (
+                        <button
+                          className={`btn btn-sm ${r.plan === 'pro' ? 'btn-dark' : 'btn-light'}`}
+                          disabled={busy}
+                          title={r.plan === 'pro' ? '무료로 되돌리기' : '유료(Pro)로 전환'}
+                          onClick={() => run(r.id, () => setUserPlan(r.id, r.plan === 'pro' ? 'free' : 'pro'))}
+                        >
+                          {r.plan === 'pro' ? '⭐ Pro' : 'Free'}
+                        </button>
                       )}
                       {!r.isAdmin && (
                         <button className="btn btn-light btn-sm" disabled={busy} onClick={() => toggleReset(r.id)}>

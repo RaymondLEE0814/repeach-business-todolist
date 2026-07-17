@@ -19,6 +19,9 @@ export default async function AdminPage() {
   ]);
 
   const adminSet = new Set((admins ?? []).map((a: { user_id: string }) => a.user_id));
+  // plan 컬럼은 migration_plans.sql 실행 전에는 없을 수 있으므로 별도로 관대하게 조회(실패 시 전원 free)
+  const { data: planRows } = await supabase.from('profiles').select('id,plan').eq('mindash_member', true);
+  const planMap = new Map((planRows ?? []).map((p: { id: string; plan: string | null }) => [p.id, p.plan]));
   const rows: AdminUserRow[] = (profiles ?? []).map(
     (p: {
       id: string;
@@ -32,6 +35,7 @@ export default async function AdminPage() {
       email: p.email,
       fullName: p.full_name,
       status: (p.status as AdminUserRow['status']) ?? 'pending',
+      plan: planMap.get(p.id) === 'pro' ? 'pro' : 'free',
       createdAt: p.created_at,
       approvedAt: p.approved_at,
       isAdmin: adminSet.has(p.id),

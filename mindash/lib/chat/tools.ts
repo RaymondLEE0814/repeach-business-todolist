@@ -2,6 +2,13 @@
 // 모든 호출은 요청의 "로그인 세션" Supabase 클라이언트로 실행되므로 RLS(owner)로 본인 데이터만 접근.
 import { Type, type FunctionDeclaration } from '@google/genai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { parseQuotaError, QUOTA_COPY } from '@/lib/plan';
+
+// 무료 한도 초과(MINDASH_QUOTA:*) 에러는 챗봇용 한국어 안내로 치환, 그 외는 원문 유지.
+const errMsg = (m: string) => {
+  const q = parseQuotaError(m);
+  return q ? `${QUOTA_COPY[q].body} 요금제는 /pricing 에서 볼 수 있어요.` : m;
+};
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const toStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -148,7 +155,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
         if (proj) q = q.eq('project_id', proj.id);
         if (!includeCompleted) q = q.eq('completed', false);
         const { data, error } = await q;
-        if (error) return { error: error.message };
+        if (error) return { error: errMsg(error.message) };
         let rows = (data as { id: string; title: string; completed: boolean; due_date: string | null; project_id: string }[]) ?? [];
         const t = todayStr();
         const eow = endOfWeekStr();
@@ -168,7 +175,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
           const id = uid();
           const nm = String(args.project).trim();
           const { error } = await sb.from('projects').insert({ id, name: nm, owner_id: ctx.userId, team_id: ctx.currentTeamId });
-          if (error) return { ok: false, error: error.message };
+          if (error) return { ok: false, error: errMsg(error.message) };
           proj = { id, name: nm, team_id: ctx.currentTeamId };
           ctx.changed.v = true;
         }
@@ -178,7 +185,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
           const id = uid();
           const nm = ctx.currentTeamId ? '팀 할 일' : '내 할 일';
           const { error } = await sb.from('projects').insert({ id, name: nm, owner_id: ctx.userId, team_id: ctx.currentTeamId });
-          if (error) return { ok: false, error: error.message };
+          if (error) return { ok: false, error: errMsg(error.message) };
           proj = { id, name: nm, team_id: ctx.currentTeamId };
           ctx.changed.v = true;
         }
@@ -192,7 +199,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
           const id = uid();
           const nm = args.category ? String(args.category).trim() : '할 일';
           const { error } = await sb.from('categories').insert({ project_id: proj.id, id, name: nm, position: catList.length });
-          if (error) return { ok: false, error: error.message };
+          if (error) return { ok: false, error: errMsg(error.message) };
           cat = { id, name: nm };
         }
         // 상위 할 일(parent) 지정 시: 제목 부분일치로 찾아 그 밑에 중첩 + 카테고리 상속
@@ -216,7 +223,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
           project_id: proj.id, id, category_id: cat.id, title, completed: false,
           notes: '', assignee: '', progress: '0', link: '', difficulty: diff, due_date: due, parent_id: parentId, position: count ?? 0,
         });
-        if (error) return { ok: false, error: error.message };
+        if (error) return { ok: false, error: errMsg(error.message) };
         ctx.changed.v = true;
         ctx.log(`add_todo "${title}" → ${proj.name}/${cat.name}`);
         return { ok: true, added: { title, project: proj.name, category: cat.name, due_date: due, difficulty: diff } };
@@ -230,7 +237,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
         const proj = findProject(projects, args.project as string, ctx);
         if (proj) q = q.eq('project_id', proj.id);
         const { data, error } = await q;
-        if (error) return { ok: false, error: error.message };
+        if (error) return { ok: false, error: errMsg(error.message) };
         const ql = query.toLowerCase();
         const matches = ((data as { id: string; title: string; project_id: string; category_id: string }[]) ?? []).filter((r) =>
           r.title.toLowerCase().includes(ql)
@@ -260,7 +267,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
         const teamId = args.personal ? null : ctx.currentTeamId; // 팀 컨텍스트면 팀에, personal=true면 개인에
         const id = uid();
         const { error } = await sb.from('projects').insert({ id, name, owner_id: ctx.userId, team_id: teamId });
-        if (error) return { ok: false, error: error.message };
+        if (error) return { ok: false, error: errMsg(error.message) };
         ctx.changed.v = true;
         return { ok: true, project: name, space: teamId ? '팀' : '개인' };
       }
@@ -273,7 +280,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
         const { data: cats } = await sb.from('categories').select('id').eq('project_id', proj.id);
         const id = uid();
         const { error } = await sb.from('categories').insert({ project_id: proj.id, id, name, position: cats?.length ?? 0 });
-        if (error) return { ok: false, error: error.message };
+        if (error) return { ok: false, error: errMsg(error.message) };
         ctx.changed.v = true;
         return { ok: true, category: name, project: proj.name };
       }

@@ -9,10 +9,10 @@ export const metadata: Metadata = {
 };
 
 const PLANS = [
-  { name: 'Free', price: '0', target: '체험 / 개인 시작', value: '프로젝트 3개, 마인드맵 3개', featured: false },
-  { name: 'Personal Pro', price: '3,900', target: '개인', value: '무제한 프로젝트와 캘린더 연동', featured: true },
+  { name: 'Free', price: '0', target: '체험 / 개인 시작', value: '개인 프로젝트 3개 · 할 일 300개', featured: false },
+  { name: 'Personal Pro', price: '3,900', target: '개인', value: '무제한 프로젝트와 할 일', featured: true },
   { name: 'Freelancer', price: '7,900', target: '1인 사업자', value: '고객별 프로젝트와 외부 공유', featured: false },
-  { name: 'Team Starter', price: '19,000', target: '2~5명 팀', value: '팀원 3명 포함, 담당자·댓글·팀 캘린더', featured: false },
+  { name: 'Team Starter', price: '19,000', target: '2~6명 팀', value: '팀원 최대 6명, 담당자·팀 진행현황', featured: false },
 ];
 
 export default function PricingPage() {

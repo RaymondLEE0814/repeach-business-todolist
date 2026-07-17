@@ -656,6 +656,23 @@ ul { list-style: none; }
 }
 
 /* ============================================================
+   무료 한도 업그레이드 모달
+   ============================================================ */
+.quota-backdrop {
+  position: fixed; inset: 0; z-index: 200; background: rgba(18, 18, 18, 0.45);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.quota-modal {
+  background: #fff; border-radius: var(--radius-cards-large); box-shadow: var(--shadow-lg);
+  max-width: 380px; width: 100%; padding: 28px 26px; text-align: center;
+}
+.quota-icon { font-size: 40px; line-height: 1; margin-bottom: 12px; }
+.quota-title { font-family: var(--font-family); font-size: var(--text-heading-sm); color: var(--color-charcoal-primary); margin-bottom: 10px; }
+.quota-body { font-size: 14px; line-height: 1.55; color: var(--color-graphite); margin-bottom: 22px; }
+.quota-actions { display: flex; flex-direction: column; gap: 8px; }
+.quota-actions .btn { text-align: center; }
+
+/* ============================================================
    팀(그룹) 워크스페이스
    ============================================================ */
 /* 상단 바: 좌측 탭 + 우측 토글 한 줄 */

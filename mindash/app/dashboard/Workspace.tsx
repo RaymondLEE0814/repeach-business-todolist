@@ -26,6 +26,8 @@ import {
 } from '@/lib/gamification';
 import Confetti from './Confetti';
 import GameBar from './GameBar';
+import QuotaModal from './QuotaModal';
+import { parseQuotaError, type QuotaCode } from '@/lib/plan';
 import LevelUpOverlay, { type LevelUp } from './LevelUpOverlay';
 import { dueLabel, bucketOf } from './dateUtils';
 
@@ -92,6 +94,9 @@ export default function Workspace({
   // 담당자 지정 — members: 현재 팀원, assignFor: 담당자 팝오버가 열린 todo id
   const [members, setMembers] = useState<Member[]>([]);
   const [assignFor, setAssignFor] = useState<string | null>(null);
+
+  // 무료 한도 초과 시 업그레이드 모달. insert 에러 메시지에서 MINDASH_QUOTA 코드를 파싱해 띄운다.
+  const [quotaCode, setQuotaCode] = useState<QuotaCode | null>(null);
 
   // 컬럼 접기 / 완료 구역 펼치기 — proj를 함께 담아 프로젝트 전환 중 이전 상태가 새 키를 덮는 것을 막는다
   const [fold, setFold] = useState<FoldState>({ proj: null, cols: {}, done: {} });
@@ -321,7 +326,11 @@ export default function Workspace({
     if (!name) return;
     const id = uid();
     const { error } = await supabase.from('projects').insert({ id, name, owner_id: userId, team_id: teamId });
-    if (error) return alert('프로젝트 생성 실패: ' + error.message);
+    if (error) {
+      const q = parseQuotaError(error.message);
+      if (q) return setQuotaCode(q);
+      return alert('프로젝트 생성 실패: ' + error.message);
+    }
     setProjects((p) => [...p, { id, name }]);
     setActiveId(id);
     setAddingProject(false);
@@ -429,7 +438,11 @@ export default function Workspace({
       parent_id: null,
       position: todos.length,
     });
-    if (error) return alert('할 일 생성 실패: ' + error.message);
+    if (error) {
+      const q = parseQuotaError(error.message);
+      if (q) return setQuotaCode(q);
+      return alert('할 일 생성 실패: ' + error.message);
+    }
     setTodos((t) => [
       ...t,
       {
@@ -480,7 +493,11 @@ export default function Workspace({
       parent_id: parentId,
       position: todos.length,
     });
-    if (error) return alert('추가 실패: ' + error.message);
+    if (error) {
+      const q = parseQuotaError(error.message);
+      if (q) return setQuotaCode(q);
+      return alert('추가 실패: ' + error.message);
+    }
     setTodos((t) => [
       ...t,
       {
@@ -1229,6 +1246,7 @@ export default function Workspace({
     <>
       <Confetti fireKey={confettiKey} />
       <LevelUpOverlay data={levelUp} onClose={() => setLevelUp(null)} />
+      <QuotaModal code={quotaCode} onClose={() => setQuotaCode(null)} />
       {toast && (
         <div className="game-toast" key={toast.key}>
           <span className="game-toast-icon">{toast.icon}</span>

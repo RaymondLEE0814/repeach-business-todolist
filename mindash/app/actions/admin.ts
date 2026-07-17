@@ -99,6 +99,16 @@ export async function issueResetLink(userId: string): Promise<PasswordResetResul
   return { ok: true, secret: link, email: pre.email };
 }
 
+export async function setUserPlan(userId: string, plan: 'free' | 'pro'): Promise<AdminActionResult> {
+  const { supabase, ok } = await requireAdmin();
+  if (!ok) return { ok: false, reason: '관리자 권한이 없습니다.' };
+  const { data, error } = await supabase.rpc('mindash_set_user_plan', { p_user: userId, p_plan: plan });
+  if (error) return { ok: false, reason: error.message };
+  const res = data as { ok: boolean; reason?: string };
+  revalidatePath('/admin');
+  return { ok: res.ok, reason: res.reason ? REASONS[res.reason] ?? res.reason : undefined };
+}
+
 export async function setAdmin(userId: string, grant: boolean): Promise<AdminActionResult> {
   const { supabase, ok } = await requireAdmin();
   if (!ok) return { ok: false, reason: '관리자 권한이 없습니다.' };
