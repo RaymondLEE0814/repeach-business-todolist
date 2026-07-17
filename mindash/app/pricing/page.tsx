@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import Nav from '@/app/components/Nav';
 import Footer from '@/app/components/Footer';
 
 export const metadata: Metadata = {
   title: '요금제 | Mindash',
   description:
-    '개인 월 3,900원부터, 팀은 인당 과금 없는 고정 요금. Mindash 베타 예상 요금제를 확인하세요.',
+    '개인 월 3,900원부터, 팀은 인당 과금 없는 고정 요금. Mindash 요금제를 확인하세요.',
 };
 
 const PLANS = [
@@ -45,24 +46,24 @@ export default function PricingPage() {
                   )}
                 </div>
                 <p className="plan-value">{p.value}</p>
-                <a href="/#beta" className={`btn ${p.featured ? 'btn-dark' : 'btn-light'} btn-block btn-sm`}>
-                  이 가격으로 신청
-                </a>
+                <Link href="/signup" className={`btn ${p.featured ? 'btn-dark' : 'btn-light'} btn-block btn-sm`}>
+                  {p.price === '0' ? '무료로 시작하기' : '시작하기'}
+                </Link>
               </div>
             ))}
           </div>
 
           <p className="price-note">
-            표시된 금액은 확정 결제가 아니라 베타 예상 요금제입니다. 출시 시 다시 안내드립니다.
+            표시된 금액은 확정 결제가 아니라 예상 요금제입니다. 정식 결제는 곧 안내드립니다.
           </p>
 
           <div className="pricing-cta">
-            <a href="/#beta" className="btn btn-dark">
-              이 가격으로 베타 신청하기
-            </a>
-            <a href="/#beta" className="btn btn-light">
-              팀 요금제 알림 받기
-            </a>
+            <Link href="/signup" className="btn btn-dark">
+              무료로 시작하기
+            </Link>
+            <Link href="/login" className="btn btn-light">
+              로그인
+            </Link>
           </div>
         </div>
       </section>

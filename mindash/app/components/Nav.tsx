@@ -18,9 +18,9 @@ export default function Nav() {
           <Link href="/login" className="btn btn-light btn-sm">
             로그인
           </Link>
-          <a href="/#beta" className="btn btn-dark btn-sm">
-            무료 베타 신청
-          </a>
+          <Link href="/signup" className="btn btn-dark btn-sm">
+            무료로 시작하기
+          </Link>
         </div>
       </div>
     </nav>

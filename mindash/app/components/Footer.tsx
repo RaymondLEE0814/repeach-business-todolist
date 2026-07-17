@@ -17,7 +17,6 @@ export default function Footer() {
           <div className="footer-links">
             <a href="/#features">기능</a>
             <Link href="/pricing">요금제</Link>
-            <a href="/#beta">베타 신청</a>
             <a href="/#ads">광고 문의</a>
             <Link href="/login">로그인</Link>
             <Link href="/signup">회원가입</Link>

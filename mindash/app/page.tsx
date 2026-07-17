@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import Nav from '@/app/components/Nav';
-import BetaForm from '@/app/components/BetaForm';
 import AdInquiryForm from '@/app/components/AdInquiryForm';
 import Footer from '@/app/components/Footer';
 import HeroDecor from '@/app/components/HeroDecor';
@@ -89,14 +88,14 @@ export default function Home() {
             마인드맵과 일정표를 한 화면에 연결하세요.
           </p>
           <div className="hero-actions">
-            <a href="#beta" className="btn btn-dark">
-              무료 베타 신청하기
-            </a>
+            <Link href="/signup" className="btn btn-dark">
+              무료로 시작하기
+            </Link>
             <Link href="/pricing" className="btn btn-light">
               요금제 미리 보기
             </Link>
           </div>
-          <p className="hero-note">신용카드 없이 신청 · 베타 예상 요금제</p>
+          <p className="hero-note">신용카드 없이 · 가입 즉시 이용</p>
 
           {/* 서비스 소개 영상 */}
           <div className="hero-video-wrap">
@@ -268,23 +267,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- Beta signup ---------- */}
-      <section className="section beta" id="beta">
-        <div className="container">
-          <div className="section-head">
-            <span className="eyebrow">무료 베타</span>
-            <h2 className="heading-lg">가장 먼저 사용해 보세요</h2>
-            <p>30초면 신청 완료. 베타 오픈 시 가장 먼저 안내드립니다.</p>
-          </div>
-          <BetaForm />
-        </div>
-      </section>
-
       {/* ---------- Pricing 티저 (자세한 요금표는 /pricing) ---------- */}
       <section className="section-tight" id="pricing">
         <div className="container">
           <div className="section-head">
-            <span className="eyebrow">베타 예상 요금제</span>
+            <span className="eyebrow">요금제</span>
             <h2 className="heading-lg">무료부터 월 19,000원까지, 작은 팀 가격</h2>
             <p>인당 과금 없는 고정 요금. 자세한 플랜은 요금제 페이지에서 확인하세요.</p>
           </div>
@@ -292,9 +279,9 @@ export default function Home() {
             <Link href="/pricing" className="btn btn-dark">
               요금제 자세히 보기
             </Link>
-            <a href="#beta" className="btn btn-light">
-              무료 베타 신청
-            </a>
+            <Link href="/signup" className="btn btn-light">
+              무료로 시작하기
+            </Link>
           </div>
         </div>
       </section>
