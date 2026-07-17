@@ -140,13 +140,13 @@ export default function AdminUsers({
                   <td className="admin-date">{fmt(r.createdAt)}</td>
                   <td>
                     <div className="admin-actions">
-                      {r.status === 'rejected' && (
+                      {r.status !== 'approved' && (
                         <button
                           className="btn btn-dark btn-sm"
                           disabled={busy}
                           onClick={() => run(r.id, () => setUserStatus(r.id, 'approved'))}
                         >
-                          차단 해제
+                          {r.status === 'rejected' ? '차단 해제' : '이용 허용'}
                         </button>
                       )}
                       {r.status !== 'rejected' && !r.isAdmin && (
