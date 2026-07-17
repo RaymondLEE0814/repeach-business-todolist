@@ -103,15 +103,14 @@ export async function signUp(
     return { error: '회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.' };
   }
 
-  // 이메일 확인이 꺼져 있으면 곧바로 세션이 생성됨 → 승인 대기 페이지로
+  // 이메일 확인이 꺼져 있으면 곧바로 세션이 생성됨 → 자동승인이므로 바로 대시보드로
   if (data.session) {
     revalidatePath('/', 'layout');
-    redirect('/pending');
+    redirect('/dashboard');
   }
 
   return {
-    notice:
-      '확인 이메일을 보냈습니다. 메일의 링크를 클릭해 가입을 완료한 뒤 로그인해 주세요. (가입 후 관리자 승인이 필요합니다.)',
+    notice: '확인 이메일을 보냈어요. 메일의 링크를 클릭해 가입을 완료한 뒤 로그인하면 바로 시작할 수 있어요.',
   };
 }
 

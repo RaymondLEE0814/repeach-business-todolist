@@ -33,20 +33,20 @@ export default async function PendingPage() {
       <div className="pending-card">
         <div className="pending-illus">{rejected ? '🚫' : '⏳'}</div>
         <h1 className="pending-title">
-          {rejected ? '가입이 거절되었습니다' : '관리자 승인 대기 중이에요'}
+          {rejected ? '이용이 제한된 계정이에요' : '계정을 준비하고 있어요'}
         </h1>
         <p className="pending-desc">
           {rejected ? (
             <>
-              현재 계정({user.email})의 가입이 거절된 상태입니다.
+              현재 계정({user.email})은 이용이 제한된 상태예요.
               <br />
               문의가 필요하면 관리자에게 연락해 주세요.
             </>
           ) : (
             <>
-              가입해 주셔서 감사합니다! 계정({user.email})은 관리자 승인 후 이용할 수 있어요.
+              계정({user.email})을 준비하고 있어요.
               <br />
-              승인이 완료되면 새로고침만으로 바로 시작할 수 있습니다.
+              새로고침하면 바로 시작할 수 있어요.
             </>
           )}
         </p>

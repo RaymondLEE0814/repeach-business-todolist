@@ -14,9 +14,9 @@ export type AdminUserRow = {
 };
 
 const STATUS_META: Record<AdminUserRow['status'], { label: string; cls: string }> = {
-  pending: { label: '승인 대기', cls: 'st-pending' },
-  approved: { label: '승인됨', cls: 'st-approved' },
-  rejected: { label: '거절됨', cls: 'st-rejected' },
+  pending: { label: '준비 중', cls: 'st-pending' },
+  approved: { label: '이용 중', cls: 'st-approved' },
+  rejected: { label: '차단됨', cls: 'st-rejected' },
 };
 
 function fmt(d: string | null): string {
@@ -140,22 +140,13 @@ export default function AdminUsers({
                   <td className="admin-date">{fmt(r.createdAt)}</td>
                   <td>
                     <div className="admin-actions">
-                      {r.status !== 'approved' && (
+                      {r.status === 'rejected' && (
                         <button
                           className="btn btn-dark btn-sm"
                           disabled={busy}
                           onClick={() => run(r.id, () => setUserStatus(r.id, 'approved'))}
                         >
-                          승인
-                        </button>
-                      )}
-                      {r.status === 'approved' && !r.isAdmin && (
-                        <button
-                          className="btn btn-light btn-sm"
-                          disabled={busy}
-                          onClick={() => run(r.id, () => setUserStatus(r.id, 'pending'))}
-                        >
-                          승인취소
+                          차단 해제
                         </button>
                       )}
                       {r.status !== 'rejected' && !r.isAdmin && (
@@ -164,7 +155,7 @@ export default function AdminUsers({
                           disabled={busy}
                           onClick={() => run(r.id, () => setUserStatus(r.id, 'rejected'))}
                         >
-                          거절
+                          차단
                         </button>
                       )}
                       {!r.isAdmin ? (

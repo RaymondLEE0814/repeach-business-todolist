@@ -38,14 +38,14 @@ export default async function AdminPage() {
     })
   );
 
-  const pending = rows.filter((r) => r.status === 'pending').length;
   const approved = rows.filter((r) => r.status === 'approved').length;
+  const blocked = rows.filter((r) => r.status === 'rejected').length;
 
   return (
     <>
       <h1 className="dash-hello">사용자 관리 🛡️</h1>
       <p className="body-lg" style={{ marginTop: 8 }}>
-        전체 {rows.length}명 · 승인 대기 <b>{pending}</b>명 · 승인됨 {approved}명. 가입한 사용자를 승인해야 앱을 사용할 수 있어요.
+        전체 {rows.length}명 · 이용 중 {approved}명 · 차단 <b>{blocked}</b>명. 계정은 가입 즉시 이용할 수 있고, 필요하면 여기서 차단할 수 있어요.
       </p>
       <div style={{ marginTop: 24 }}>
         <AdminUsers rows={rows} currentUserId={user?.id ?? ''} />

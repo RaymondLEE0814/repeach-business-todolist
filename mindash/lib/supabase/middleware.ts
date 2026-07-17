@@ -72,7 +72,7 @@ export async function updateSession(request: NextRequest) {
     } else if (!approved) {
       if (isApi) {
         return NextResponse.json(
-          { error: '관리자 승인 대기 중입니다. 승인 후 이용할 수 있어요.' },
+          { error: '이용이 제한된 계정입니다. 관리자에게 문의해 주세요.' },
           { status: 403 }
         );
       }
