@@ -267,25 +267,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- Pricing 티저 (자세한 요금표는 /pricing) ---------- */}
-      <section className="section-tight" id="pricing">
-        <div className="container">
-          <div className="section-head">
-            <span className="eyebrow">요금제</span>
-            <h2 className="heading-lg">무료부터 월 19,000원까지, 작은 팀 가격</h2>
-            <p>인당 과금 없는 고정 요금. 자세한 플랜은 요금제 페이지에서 확인하세요.</p>
-          </div>
-          <div className="pricing-cta">
-            <Link href="/pricing" className="btn btn-dark">
-              요금제 자세히 보기
-            </Link>
-            <Link href="/signup" className="btn btn-light">
-              무료로 시작하기
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* ---------- 광고 · 제휴 문의 ---------- */}
       <section className="section" id="ads" style={{ background: 'var(--color-parchment-card)' }}>
         <div className="container">
