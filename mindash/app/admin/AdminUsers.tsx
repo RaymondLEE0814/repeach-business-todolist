@@ -180,7 +180,7 @@ export default function AdminUsers({
                           </button>
                         )
                       )}
-                      {!r.isAdmin && (
+                      {!r.isAdmin ? (
                         <button
                           className={`btn btn-sm ${r.plan === 'pro' ? 'btn-dark' : 'btn-light'}`}
                           disabled={busy}
@@ -189,6 +189,10 @@ export default function AdminUsers({
                         >
                           {r.plan === 'pro' ? '⭐ Pro' : 'Free'}
                         </button>
+                      ) : (
+                        <span className="admin-plan-fixed" title="관리자 계정은 항상 무제한(Pro)입니다">
+                          ⭐ Pro · 무제한
+                        </span>
                       )}
                       {!r.isAdmin && (
                         <button className="btn btn-light btn-sm" disabled={busy} onClick={() => toggleReset(r.id)}>

@@ -1115,6 +1115,7 @@ ul { list-style: none; }
 
 .admin-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .admin-actions .admin-danger { color: #c31625; }
+.admin-plan-fixed { font-size: 12px; font-weight: 600; color: var(--color-deep-amber); background: #fff6e5; border-radius: var(--radius-buttons); padding: 6px 12px; white-space: nowrap; }
 .admin-empty { text-align: center; color: var(--color-ash); padding: 32px; }
 
 /* 비밀번호 재설정 확장 패널 */
